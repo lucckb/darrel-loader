@@ -1,0 +1,14 @@
+ -- Nelson Castillo <nelson@embqbit.com>  Sun Feb  4 18:38:08 +0000
+
+  * Added intprint function.
+	* Added memory size detection (Thanks to Andrés for his ideas)
+  * Added a simple memory test feature, similar to the one that it already
+	  had. But this time, we check all the detected memory.
+	* Now we make scans = 0 after a "Dataflash not found" message.
+	  It helps debug the loader. Before the menu would repeat itself too fast.
+	* Added a coment to the 'leds' function in board.c, that is not being used.
+
+ -- Carlos Camargo <carlos@embqbit.com>  Sun Feb  4 18:38:08 +0000
+
+  * Initial release. Check CREDITS for more information.
+	* I adapted this program to boot the ECB_AT91.
