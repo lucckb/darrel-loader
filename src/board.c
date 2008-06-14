@@ -55,7 +55,7 @@ const int ONE_MBYTES = 1024 * 1024;
  * This one will help us anyway.
  * */
 
-int memory_test(int base, int len)
+int memory_test(unsigned int base, int len)
 {
   volatile int *ptr;
   int i;
@@ -74,7 +74,9 @@ int memory_test(int base, int len)
   ptr = (int *) base;
   for (i = 0; i < len / sizeof(int); i++)
     if (*(ptr++) != i)
-      return 1; /* Error */
+    {
+       return 1; /* Error */
+    }
 
   return 0;
 }
@@ -116,32 +118,38 @@ int memory_test(int base, int len)
 
 /* SDRAM Write recovery delay
  * User can set value from 2 to 15 cycles */
+//3
 #define SDRAM_TWR 3
 
 
 /* SDRAM Row Cycle Delay
  * User can set value from 2 to 15 cycles */
+//5
 #define SDRAM_TRC 5
 
 
 /* SDRAM row precharge delay
  * User can set value from 2 to 15 cycles */
+//3
 #define SDRAM_TRP 3
 
 /* SDRAM row to column delay
  * User can set value from 2 to 15 cycles */
-#define SDRAM_TRCD 3
+//3
+#define SDRAM_TRCD 4
 
 
 /* SDRAM Active to Precharge Delay
  * User can set value from 2 to 15 cycles */
-#define SDRAM_TRAS 4
+//4
+#define SDRAM_TRAS 6
 
 
 /* SDRAM Exit Self refresh to Active Delay
  * 0 - 0.5 cycle
  * 15 - 15.5 cycles */
-#define SDRAM_TXSR 5
+//5
+#define SDRAM_TXSR 6
 
 
 
@@ -149,7 +157,7 @@ int memory_test(int base, int len)
 #define SDRAM_SIZE 64
 
 
-int configure_sdram (void)
+void configure_sdram (void)
 {
   int i;
 
@@ -165,11 +173,11 @@ int configure_sdram (void)
   outl(EBI_CSA, 0x2);
 
   //outl(SDRAMC_CR, 0x2188A159);    // SDRAM 64M   Row=A0-A12, COL=A0-A8
-
   outl(
           SDRAMC_CR, (SDRAM_COL)|(SDRAM_ROW<<2)|(SDRAM_BANKS<<4)|(SDRAM_CAS<<5)|(SDRAM_TWR<<7)|
                   (SDRAM_TRC<<11)|(SDRAM_TRP<<15)|(SDRAM_TRCD<<19)|(SDRAM_TRAS<<23)|SDRAM_TXSR<<27
       );
+
   outl(SDRAMC_MR, 0x2);
   outl(AT91_SDRAM_BASE, 0);
   outl(SDRAMC_MR, 0x4);
@@ -188,27 +196,20 @@ int configure_sdram (void)
   outl(AT91_SDRAM_BASE, 0);
   outl(SDRAMC_MR, 0x0);
 
-  for (i = SDRAM_SIZE; i >= 1; --i)
-    *((char*) (AT91_SDRAM_BASE + i * ONE_MBYTES - 1)) = i;
-
-  for (i =SDRAM_SIZE; i >= 1; --i)
-   if (*((char*) (AT91_SDRAM_BASE + i * ONE_MBYTES - 1)) != i)
-     return 1;
-
-  if (memory_test(AT91_SDRAM_BASE, 0xff))
+  //Some delay
+  for(i=0;i<10000;i++) asm volatile("nop");
+  
+  if (memory_test(AT91_SDRAM_BASE+(SDRAM_SIZE-1)*ONE_MBYTES, ONE_MBYTES))
   {
     puts("\nPreliminary RAM test failed");
     hang();
   }
-
-  return 0;
 }
 
 
 void start_armboot (void)
 {
   int len, i;
-  int ram_size;
 
 
   /* PMC Clock Initialization */
@@ -226,13 +227,8 @@ void start_armboot (void)
   puts("\n.\n.\n.\nDarrell's loader - Thanks to the u-boot project\nVersion 1.0. Build " __DATE__ " " __TIME__ "\n");
   puts("Modified to BOFF board by Lucjan Bryndza <lucjan.bryndza@ep.com.pl>\n");
 
-  if(configure_sdram()!=0)
-  {
-    puts("Initial ram test failed\n");
-    hang();
-  }
-  ram_size = SDRAM_SIZE;
-  puts("DRAM:"), uintprint(ram_size), puts("MB\n");
+  configure_sdram();
+  puts("DRAM:"), uintprint(SDRAM_SIZE), puts("MB\n");
 
   int key = 0, autoboot = 1, scans = 0, dispmenu = 1;
 
@@ -304,9 +300,9 @@ void start_armboot (void)
       dispmenu = 1;
     }
      else if(key == '6'){
-      puts ("\nTesting RAM, Detected "), uintprint(ram_size), puts("MB ==> ");
+      puts ("\nTesting RAM, Detected "), uintprint(SDRAM_SIZE), puts("MB ==> ");
 
-      if (!memory_test(AT91_SDRAM_BASE, ram_size * ONE_MBYTES))
+      if (!memory_test(AT91_SDRAM_BASE, SDRAM_SIZE * ONE_MBYTES))
         puts ("OK\n");
       else
         puts ("FAILED\n");
