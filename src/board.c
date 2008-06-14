@@ -33,11 +33,11 @@ extern int AT91F_DataflashInit (void);
 extern void dataflash_print_info (void);
 
 
-#define DATAFLASH_MAX_PAGESIZE		1056
+#define DATAFLASH_MAX_PAGESIZE		264
 #define DATAFLASH_LOADER_BASE		   (0*DATAFLASH_MAX_PAGESIZE)
-#define DATAFLASH_UBOOT_BASE		  (12*DATAFLASH_MAX_PAGESIZE)
-#define DATAFLASH_ENV_UBOOT_BASE	 (122*DATAFLASH_MAX_PAGESIZE)
-#define DATAFLASH_KERNEL_BASE		 (130*DATAFLASH_MAX_PAGESIZE)
+#define DATAFLASH_UBOOT_BASE		  (43*DATAFLASH_MAX_PAGESIZE)
+#define DATAFLASH_ENV_UBOOT_BASE	 (510*DATAFLASH_MAX_PAGESIZE)
+//#define DATAFLASH_KERNEL_BASE		 (130*DATAFLASH_MAX_PAGESIZE)
 
 
 #define EBI_CSA 0xFFFFFF60
@@ -97,6 +97,9 @@ NR    RowBits
 3         Reserved
 */
 
+
+
+
 int try_configure_sdram (int mb)
 {
   int i;
@@ -115,16 +118,16 @@ int try_configure_sdram (int mb)
   switch(mb)
   {
     case 16:
-      outl(SDRAMC_CR, 0x2188A154);    // SDRAM 8M    Row=A0-A11, COL=A0-A7
+      outl(SDRAMC_CR, 0x2188A154);    // SDRAM 16M    Row=A0-A11, COL=A0-A7
       break;
    case 32:
-      outl(SDRAMC_CR, 0x2188A155);    // SDRAM 16M   Row=A0-A11, COL=A0-A8
+      outl(SDRAMC_CR, 0x2188A155);    // SDRAM 32M   Row=A0-A11, COL=A0-A8
       break;
    case 64:
-      outl(SDRAMC_CR, 0x2188A159);    // SDRAM 32M   Row=A0-A12, COL=A0-A8
+      outl(SDRAMC_CR, 0x2188A159);    // SDRAM 64M   Row=A0-A12, COL=A0-A8
       break;
    case 128:
-      outl(SDRAMC_CR, 0x2188A15A);    // SDRAM 64M   Row=A0-A12, COL=A0-A9
+      outl(SDRAMC_CR, 0x2188A15A);    // SDRAM 128M   Row=A0-A12, COL=A0-A9
       break;
    default:
       puts("\ntry_configure_sdram\n");
@@ -208,7 +211,7 @@ void start_armboot (void)
     {
       puts("\n1: Upload Darrell's loader to Dataflash\n");
       puts("2: Upload u-boot to Dataflash\n");
-      puts("3: Upload Kernel to Dataflash\n");
+      //puts("3: Upload Kernel to Dataflash\n");
       puts("4: Start u-boot\n");
       puts("5: Erase bootsector in flash\n");
       puts("6: Memory test\n");
@@ -244,6 +247,7 @@ void start_armboot (void)
         puts("Dataflash write successful\n");
       dispmenu = 1;
     }
+    /*
     else if(key == '3'){
       puts("Please transfer Kernel via Xmodem\n\0");
       len = rxmodem((char *)0x20000000);
@@ -254,6 +258,7 @@ void start_armboot (void)
         puts("Dataflash write successful\n");
       dispmenu = 1;
     }
+    */
     else if(key == '4' || ((scans > 300000) && autoboot)){
       if(AT91F_DataflashInit ()){
         dataflash_print_info ();
