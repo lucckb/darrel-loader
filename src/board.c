@@ -81,26 +81,75 @@ int memory_test(int base, int len)
 
 
 
-/*
-SDRAMC_CR = 2188A15X      where X = NR  NC  (NR, NC 2bits)
-NC    ColumnBits
-0         8
-1         9
-2         10
-3         11
 
 
-NR    RowBits
-0         11
-1         12
-2         13
-3         Reserved
-*/
+/* Number of SDRAM Column
+ * 0 - Column bits 8
+ * 1 - Column bits 9
+ * 2 - Column bits 10
+ * 3 - Column bits 11 */
+#define SDRAM_COL 1
+
+
+/* Number of SDRAM Row
+ * 0 - Row bits 11
+ * 1 - Row bits 12
+ * 2 - Row Bits 13
+ * 3 - Reserved  */
+#define SDRAM_ROW 2
+
+
+/* Number of SDRAM Banks
+ * 0 - Number of banks 2
+ * 1 - Number of banks 4 */
+#define SDRAM_BANKS 1
 
 
 
+/* SDRAM Cas latency
+ * 0 - Reserved
+ * 1 - Reserved
+ * 2 - CAS 2
+ * 3 - Reserved */
+#define SDRAM_CAS 2
 
-int try_configure_sdram (int mb)
+
+/* SDRAM Write recovery delay
+ * User can set value from 2 to 15 cycles */
+#define SDRAM_TWR 3
+
+
+/* SDRAM Row Cycle Delay
+ * User can set value from 2 to 15 cycles */
+#define SDRAM_TRC 5
+
+
+/* SDRAM row precharge delay
+ * User can set value from 2 to 15 cycles */
+#define SDRAM_TRP 3
+
+/* SDRAM row to column delay
+ * User can set value from 2 to 15 cycles */
+#define SDRAM_TRCD 3
+
+
+/* SDRAM Active to Precharge Delay
+ * User can set value from 2 to 15 cycles */
+#define SDRAM_TRAS 4
+
+
+/* SDRAM Exit Self refresh to Active Delay
+ * 0 - 0.5 cycle
+ * 15 - 15.5 cycles */
+#define SDRAM_TXSR 5
+
+
+
+/* SDRAM Board size in Megs */
+#define SDRAM_SIZE 64
+
+
+int configure_sdram (void)
 {
   int i;
 
@@ -115,25 +164,12 @@ int try_configure_sdram (int mb)
   //Select memory controler 
   outl(EBI_CSA, 0x2);
 
-  switch(mb)
-  {
-    case 16:
-      outl(SDRAMC_CR, 0x2188A154);    // SDRAM 16M    Row=A0-A11, COL=A0-A7
-      break;
-   case 32:
-      outl(SDRAMC_CR, 0x2188A155);    // SDRAM 32M   Row=A0-A11, COL=A0-A8
-      break;
-   case 64:
-      outl(SDRAMC_CR, 0x2188A159);    // SDRAM 64M   Row=A0-A12, COL=A0-A8
-      break;
-   case 128:
-      outl(SDRAMC_CR, 0x2188A15A);    // SDRAM 128M   Row=A0-A12, COL=A0-A9
-      break;
-   default:
-      puts("\ntry_configure_sdram\n");
-      hang();
-  }
+  //outl(SDRAMC_CR, 0x2188A159);    // SDRAM 64M   Row=A0-A12, COL=A0-A8
 
+  outl(
+          SDRAMC_CR, (SDRAM_COL)|(SDRAM_ROW<<2)|(SDRAM_BANKS<<4)|(SDRAM_CAS<<5)|(SDRAM_TWR<<7)|
+                  (SDRAM_TRC<<11)|(SDRAM_TRP<<15)|(SDRAM_TRCD<<19)|(SDRAM_TRAS<<23)|SDRAM_TXSR<<27
+      );
   outl(SDRAMC_MR, 0x2);
   outl(AT91_SDRAM_BASE, 0);
   outl(SDRAMC_MR, 0x4);
@@ -152,10 +188,10 @@ int try_configure_sdram (int mb)
   outl(AT91_SDRAM_BASE, 0);
   outl(SDRAMC_MR, 0x0);
 
-  for (i = mb; i >= 1; --i)
+  for (i = SDRAM_SIZE; i >= 1; --i)
     *((char*) (AT91_SDRAM_BASE + i * ONE_MBYTES - 1)) = i;
 
-  for (i = mb; i >= 1; --i)
+  for (i =SDRAM_SIZE; i >= 1; --i)
    if (*((char*) (AT91_SDRAM_BASE + i * ONE_MBYTES - 1)) != i)
      return 1;
 
@@ -190,17 +226,12 @@ void start_armboot (void)
   puts("\n.\n.\n.\nDarrell's loader - Thanks to the u-boot project\nVersion 1.0. Build " __DATE__ " " __TIME__ "\n");
   puts("Modified to BOFF board by Lucjan Bryndza <lucjan.bryndza@ep.com.pl>\n");
 
-  /* Let's detect how much RAM we have */
-  for (i = 128; i >= 16; i /= 2)
-    if (!try_configure_sdram(i))
-    {
-      ram_size = i;
-      break;
-    }
-
-  if (i < 8)
-    puts ("Couldn't determine ram size"), hang();
-
+  if(configure_sdram()!=0)
+  {
+    puts("Initial ram test failed\n");
+    hang();
+  }
+  ram_size = SDRAM_SIZE;
   puts("DRAM:"), uintprint(ram_size), puts("MB\n");
 
   int key = 0, autoboot = 1, scans = 0, dispmenu = 1;
