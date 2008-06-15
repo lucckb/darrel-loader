@@ -154,7 +154,7 @@ void start_armboot (void)
   for(i=0; i < 10000; i++); /* Some of the parts want some time after powerup */
 
   puts("\n.\n.\n.\nBoFF loader - Thanks to the darrel-loader  project\nVersion 1.1. Build " __DATE__ " " __TIME__ "\n");
-  puts("Based on Darrel loader project  Lucjan Bryndza <lucjan.bryndza@ep.com.pl>. License GPL v2/3\n");
+  puts("Based on Darrel loader project  Lucjan Bryndza <lucjan.bryndza@ep.com.pl>.\nLicense GPL v2/3\n");
 
   configure_sdram();
   puts("DRAM:"), uintprint(SDRAM_SIZE), puts("MB\n");
