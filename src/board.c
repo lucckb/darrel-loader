@@ -153,8 +153,8 @@ void start_armboot (void)
   serial_init();
   for(i=0; i < 10000; i++); /* Some of the parts want some time after powerup */
 
-  puts("\n.\n.\n.\nDarrell's loader - Thanks to the u-boot project\nVersion 1.0. Build " __DATE__ " " __TIME__ "\n");
-  puts("Modified to BOFF board by Lucjan Bryndza <lucjan.bryndza@ep.com.pl>\n");
+  puts("\n.\n.\n.\nBoFF loader - Thanks to the darrel-loader  project\nVersion 1.1. Build " __DATE__ " " __TIME__ "\n");
+  puts("Based on Darrel loader project  Lucjan Bryndza <lucjan.bryndza@ep.com.pl>. License GPL v2/3\n");
 
   configure_sdram();
   puts("DRAM:"), uintprint(SDRAM_SIZE), puts("MB\n");
