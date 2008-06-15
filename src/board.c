@@ -83,80 +83,6 @@ int memory_test(unsigned int base, int len)
 
 
 
-
-
-/* Number of SDRAM Column
- * 0 - Column bits 8
- * 1 - Column bits 9
- * 2 - Column bits 10
- * 3 - Column bits 11 */
-#define SDRAM_COL 1
-
-
-/* Number of SDRAM Row
- * 0 - Row bits 11
- * 1 - Row bits 12
- * 2 - Row Bits 13
- * 3 - Reserved  */
-#define SDRAM_ROW 2
-
-
-/* Number of SDRAM Banks
- * 0 - Number of banks 2
- * 1 - Number of banks 4 */
-#define SDRAM_BANKS 1
-
-
-
-/* SDRAM Cas latency
- * 0 - Reserved
- * 1 - Reserved
- * 2 - CAS 2
- * 3 - Reserved */
-#define SDRAM_CAS 2
-
-
-/* SDRAM Write recovery delay
- * User can set value from 2 to 15 cycles */
-//3
-#define SDRAM_TWR 3
-
-
-/* SDRAM Row Cycle Delay
- * User can set value from 2 to 15 cycles */
-//5
-#define SDRAM_TRC 5
-
-
-/* SDRAM row precharge delay
- * User can set value from 2 to 15 cycles */
-//3
-#define SDRAM_TRP 3
-
-/* SDRAM row to column delay
- * User can set value from 2 to 15 cycles */
-//3
-#define SDRAM_TRCD 4
-
-
-/* SDRAM Active to Precharge Delay
- * User can set value from 2 to 15 cycles */
-//4
-#define SDRAM_TRAS 6
-
-
-/* SDRAM Exit Self refresh to Active Delay
- * 0 - 0.5 cycle
- * 15 - 15.5 cycles */
-//5
-#define SDRAM_TXSR 6
-
-
-
-/* SDRAM Board size in Megs */
-#define SDRAM_SIZE 64
-
-
 void configure_sdram (void)
 {
   int i;
@@ -165,11 +91,13 @@ void configure_sdram (void)
   uintprint(mb), puts ("MB?\n");
 #endif
 
+#if SDRAM_BUS_16BIT==0
   //Setup GPIO
   outl(PIOC_ASR,0xffff0000);
   outl(PIOC_BSR,0);
   outl(PIOC_PDR,0xffff0000);
-  //Select memory controler 
+#endif
+  //Select memory controler
   outl(EBI_CSA, 0x2);
 
   //outl(SDRAMC_CR, 0x2188A159);    // SDRAM 64M   Row=A0-A12, COL=A0-A8
@@ -178,23 +106,23 @@ void configure_sdram (void)
                   (SDRAM_TRC<<11)|(SDRAM_TRP<<15)|(SDRAM_TRCD<<19)|(SDRAM_TRAS<<23)|SDRAM_TXSR<<27
       );
 
-  outl(SDRAMC_MR, 0x2);
+  outl(SDRAMC_MR, 0x2 | (SDRAM_BUS_16BIT<<4) );
   outl(AT91_SDRAM_BASE, 0);
-  outl(SDRAMC_MR, 0x4);
-  outl(AT91_SDRAM_BASE, 0);
-  outl(AT91_SDRAM_BASE, 0);
+  outl(SDRAMC_MR, 0x4 | (SDRAM_BUS_16BIT<<4) );
   outl(AT91_SDRAM_BASE, 0);
   outl(AT91_SDRAM_BASE, 0);
   outl(AT91_SDRAM_BASE, 0);
   outl(AT91_SDRAM_BASE, 0);
   outl(AT91_SDRAM_BASE, 0);
   outl(AT91_SDRAM_BASE, 0);
-  outl(SDRAMC_MR, 0x3);
+  outl(AT91_SDRAM_BASE, 0);
+  outl(AT91_SDRAM_BASE, 0);
+  outl(SDRAMC_MR, 0x3 | (SDRAM_BUS_16BIT<<4) );
   for(i = 0; i < 100; i++);
   outl(0x20000080, 0);
-  outl(SDRAMC_TR, 0x1C0);
+  outl(SDRAMC_TR, SDRAM_REFRESH);
   outl(AT91_SDRAM_BASE, 0);
-  outl(SDRAMC_MR, 0x0);
+  outl(SDRAMC_MR, 0x0 | (SDRAM_BUS_16BIT<<4) );
 
   //Some delay
   for(i=0;i<10000;i++) asm volatile("nop");
@@ -215,6 +143,7 @@ void start_armboot (void)
   /* PMC Clock Initialization */
   AT91PS_PMC pmc = (AT91PS_PMC)AT91C_BASE_PMC;
   pmc->CKGR_PLLAR = 0x20269004;
+
   while(!(pmc->PMC_SR & 0x2));
   pmc->CKGR_PLLBR = 0x10193E05;
   while(!(pmc->PMC_SR & 0x4));

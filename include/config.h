@@ -66,3 +66,84 @@
 #define CONFIG_STACKSIZE	(32*1024)	/* regular stack */
 
 
+// <------------------------------------- SDRAM Configuration -----------------------------------------
+/* Number of SDRAM Column
+ * 0 - Column bits 8
+ * 1 - Column bits 9
+ * 2 - Column bits 10
+ * 3 - Column bits 11 */
+#define SDRAM_COL 1
+
+
+/* Number of SDRAM Row
+ * 0 - Row bits 11
+ * 1 - Row bits 12
+ * 2 - Row Bits 13
+ * 3 - Reserved  */
+#define SDRAM_ROW 2
+
+
+/* Number of SDRAM Banks
+ * 0 - Number of banks 2
+ * 1 - Number of banks 4 */
+#define SDRAM_BANKS 1
+
+
+/* SDRAM Cas latency
+ * 0 - Reserved
+ * 1 - Reserved
+ * 2 - CAS 2
+ * 3 - Reserved */
+#define SDRAM_CAS 2
+
+
+/* SDRAM Write recovery delay
+ * User can set value from 2 to 15 cycles */
+
+#define SDRAM_TWR 2
+
+
+/* SDRAM Row Cycle Delay
+ * User can set value from 2 to 15 cycles */
+
+#define SDRAM_TRC 4
+
+
+/* SDRAM row precharge delay
+ * User can set value from 2 to 15 cycles */
+
+#define SDRAM_TRP 2
+
+/* SDRAM row to column delay
+ * User can set value from 2 to 15 cycles */
+
+#define SDRAM_TRCD 2
+
+
+/* SDRAM Active to Precharge Delay
+ * User can set value from 2 to 15 cycles */
+
+#define SDRAM_TRAS 3
+
+
+/* SDRAM Exit Self refresh to Active Delay
+ * 0 - 0.5 cycle
+ * 15 - 15.5 cycles */
+
+#define SDRAM_TXSR 4
+
+
+/* SDRAM Board size in Megs */
+#define SDRAM_SIZE 32
+
+
+/* SDRAM refresh time */
+//0x1C0
+#define SDRAM_REFRESH 0x1c0
+
+/* SDRAM Bus width
+ * 0 - 32 bit
+   1 - 16 bit
+*/
+#define SDRAM_BUS_16BIT 1
+
