@@ -66,6 +66,9 @@
 #define CONFIG_STACKSIZE	(32*1024)	/* regular stack */
 
 
+//Define uart speed divide from master clock
+#define UART_PRESCALER 33
+
 // <------------------------------------- SDRAM Configuration -----------------------------------------
 /* Number of SDRAM Column
  * 0 - Column bits 8
@@ -146,4 +149,6 @@
    1 - 16 bit
 */
 #define SDRAM_BUS_16BIT 1
+
+
 

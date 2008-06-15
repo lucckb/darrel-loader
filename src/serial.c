@@ -45,7 +45,7 @@ serial_setbrg (void)
 
   if ((baudrate = gd->bd->bi_baudrate) <= 0)
     baudrate = CONFIG_BAUDRATE;
-  us->US_BRGR = 33;	/* hardcode so no __divsi3 */
+  us->US_BRGR = UART_PRESCALER;	    /* hardcode so no __divsi3 */
 }
 
 int
