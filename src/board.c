@@ -218,9 +218,9 @@ void start_armboot (void)
     else if(key == '4' || ((scans > 300000) && autoboot)){
       if(AT91F_DataflashInit ()){
         dataflash_print_info ();
-        if(read_dataflash(DATAFLASH_UBOOT_BASE, 0x1C000, (char *)0x20700000)){
+        if(read_dataflash(DATAFLASH_UBOOT_BASE, 0x1C000, (char *)0x21f00000)){
           puts("Dataflash read successful: Starting U-boot\n");
-          asm("ldr pc, =0x20700000");
+          asm("ldr pc, =0x21f00000");
         }
       }
 
