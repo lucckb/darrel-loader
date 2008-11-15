@@ -169,7 +169,7 @@ void start_armboot (void)
       puts("2: Upload u-boot to Dataflash\n");
       //puts("3: Upload Kernel to Dataflash\n");
       puts("4: Start u-boot\n");
-      puts("5: Erase bootsector in flash\n");
+      puts("5: Erase dataflash\n");
       puts("6: Memory test\n");
       dispmenu = 0;
     }
@@ -241,11 +241,11 @@ void start_armboot (void)
     else if(key == '5')
     {
         puts("Erase dataflash - ");
-        for(i=0;i<256;i+=4)
+        for(i=0;i<135168/4;i+=4)
         outl(0x20000000+i, 0xff);
         AT91F_DataflashInit ();
         dataflash_print_info ();
-        if(write_dataflash(DATAFLASH_LOADER_BASE, 0x20000000, 256))
+        if(write_dataflash(DATAFLASH_LOADER_BASE, 0x20000000, 135168))
             puts("Done\n");
         else
            puts("Failed\n");
