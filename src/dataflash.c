@@ -610,6 +610,12 @@ case AT45DB011:
     dataflash_info.Device.page_offset = 9;
     dataflash_info.Device.byte_mask = 0x100;
     break;
+case AT45DB041:
+    dataflash_info.Device.pages_number = 2048;
+    dataflash_info.Device.pages_size = 264;
+    dataflash_info.Device.page_offset = 9;
+    dataflash_info.Device.byte_mask = 0x100;
+    break;
   case AT45DB161:
     dataflash_info.Device.pages_number = 4096;
     dataflash_info.Device.pages_size = 528;
@@ -660,6 +666,9 @@ void dataflash_print_info (void)
     break;
   case AT45DB011:
     puts ("AT45DB011\n");
+    break;
+  case AT45DB041:
+    puts ("AT45DB041\n");
     break;
   default:
     puts("Flash error\n");

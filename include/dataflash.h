@@ -104,6 +104,7 @@ typedef struct _AT91S_DATAFLASH_INFO {
 
 #define AT45DB161	0x2c
 #define AT45DB011   0x0c
+#define AT45DB041   0x1c
 #define AT45DB321	0x34
 #define AT45DB642	0x3c
 #define AT45DB128	0x10
