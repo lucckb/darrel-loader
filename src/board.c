@@ -47,6 +47,7 @@ extern void dataflash_print_info (void);
 #define PIOC_ASR (0xFFFFF800+0x70)
 #define PIOC_BSR (0xFFFFF800+0x74)
 #define PIOC_PDR (0xFFFFF800+0x4)
+#define PIOC_PER (0xFFFFF800+0x00)
 
 const int ONE_MBYTES = 1024 * 1024;
 
@@ -97,6 +98,8 @@ void configure_sdram (void)
   outl(PIOC_BSR,0);
   outl(PIOC_PDR,0xffff0000);
 #endif
+  //PC gpio AS IO fix PC7 PC8 PC9 PC10 PC11 PC12 PC13
+  outl(PIOC_PER,0x3F80);
   //Select memory controler
   outl(EBI_CSA, 0x2);
 
