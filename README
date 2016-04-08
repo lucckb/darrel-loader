@@ -1,3 +1,17 @@
+This program is a fork of the  darrel-loader project. I added 
+new features:
+
+- Better SDRAM configuration
+- Added support for new dataflash chips AT45DB011 and AT45DB041
+- Support for second bootloader GZIP-ed images
+
+Loader is dedicated for the BF210 boards
+
+
+Lucck 2008
+
+
+
 This program started out as U-boot.  I stripped most of it out
 and added a few pieces to create a bootloader less than 12K for
 the AT91RM9200 allowing boot from serial data flash.
@@ -6,6 +20,7 @@ the AT91RM9200 allowing boot from serial data flash.
 
 The following is the credits file included with u-boot. Much of that
 code is used here.
+
 
 
 #
