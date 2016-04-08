@@ -185,7 +185,7 @@ void start_armboot (void)
       key = 0;
     if(key == '1'){
       puts("Please transfer darrel loader via Xmodem\n\0");
-      len = rxmodem((char *)0x20000000);
+      len = rxmodem((unsigned char *)0x20000000);
       puts("Received ");
       hexprint(len);
       puts(" bytes\n");
@@ -199,7 +199,7 @@ void start_armboot (void)
     }
     else if(key == '2'){
       puts("Please transfer u-boot.bin via Xmodem\n\0");
-      len = rxmodem((char *)0x20000000);
+      len = rxmodem((unsigned char *)0x20000000);
       AT91F_DataflashInit ();
       dataflash_print_info ();
       if(write_dataflash(DATAFLASH_UBOOT_BASE, 0x20000000, len))
@@ -221,7 +221,7 @@ void start_armboot (void)
     else if(key == '4' || ((scans > 300000) && autoboot)){
       if(AT91F_DataflashInit ()){
         dataflash_print_info ();
-        if(read_dataflash(DATAFLASH_UBOOT_BASE,DATAFLASH_ENV_UBOOT_BASE-DATAFLASH_UBOOT_BASE, (char *)0x21f00000)){
+        if(read_dataflash(DATAFLASH_UBOOT_BASE,DATAFLASH_ENV_UBOOT_BASE-DATAFLASH_UBOOT_BASE, (unsigned char *)0x21f00000)){
           puts("Dataflash read successful: Starting U-boot\n");
           asm("ldr pc, =0x21f00000");
         }

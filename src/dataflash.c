@@ -550,7 +550,7 @@ int AT91F_DataFlashRead(
 	AT91PS_DataFlash pDataFlash,
 	unsigned long addr,
 	unsigned long size,
-	char *buffer)
+	unsigned char *buffer)
 {
 	unsigned long SizeToRead;
 
@@ -680,7 +680,7 @@ void dataflash_print_info (void)
 /* Function Name       : AT91F_DataflashSelect 					*/
 /* Object              : Select the correct device				*/
 /*------------------------------------------------------------------------------*/
-AT91PS_DataFlash AT91F_DataflashSelect (AT91PS_DataFlash pFlash, unsigned int *addr)
+AT91PS_DataFlash AT91F_DataflashSelect (AT91PS_DataFlash pFlash, unsigned long *addr)
 {
 	pFlash->pDataFlashDesc = &(dataflash_info.Desc);
 	pFlash->pDevice = &(dataflash_info.Device);
@@ -726,9 +726,9 @@ int size_dataflash (AT91PS_DataFlash pdataFlash, unsigned long addr, unsigned lo
 /* Function Name       : read_dataflash 					*/
 /* Object              : dataflash memory read					*/
 /*------------------------------------------------------------------------------*/
-int read_dataflash (unsigned long addr, unsigned long size, char *result)
+int read_dataflash (unsigned long addr, unsigned long size, unsigned char *result)
 {
-	int AddrToRead = addr;
+	unsigned long AddrToRead = addr;
 	AT91PS_DataFlash pFlash = &DataFlashInst;
 
 	pFlash = AT91F_DataflashSelect (pFlash, &AddrToRead);
@@ -750,7 +750,7 @@ int read_dataflash (unsigned long addr, unsigned long size, char *result)
 int write_dataflash (unsigned long addr_dest, unsigned long addr_src,
 		     unsigned long size)
 {
-	int AddrToWrite = addr_dest;
+	unsigned long AddrToWrite = addr_dest;
 	AT91PS_DataFlash pFlash = &DataFlashInst;
 
 	pFlash = AT91F_DataflashSelect (pFlash, &AddrToWrite);
@@ -764,7 +764,7 @@ int write_dataflash (unsigned long addr_dest, unsigned long addr_src,
 	if (AddrToWrite == -1)
 		return -1;
 
-	return AT91F_DataFlashWrite (pFlash, (char *) addr_src, AddrToWrite, size);
+	return AT91F_DataFlashWrite (pFlash, (unsigned char *) addr_src, AddrToWrite, size);
 }
 
 void dataflash_perror (int err)

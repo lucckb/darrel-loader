@@ -33,8 +33,7 @@ CPU   = at91rm9200
 BOARD = ecb_at91 
 export	ARCH CPU BOARD VENDOR
 
-#CROSS_COMPILE = arm-unknown-linux-gnu-
-CROSS_COMPILE = arm-elf-
+CROSS_COMPILE ?=arm-none-eabi-
 export	CROSS_COMPILE
 
 # load other configuration

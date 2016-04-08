@@ -172,7 +172,7 @@ extern int size_dataflash (AT91PS_DataFlash pdataFlash, unsigned long addr, unsi
 extern int prot_dataflash (AT91PS_DataFlash pdataFlash, unsigned long addr);
 extern int dataflash_real_protect (int flag, unsigned long start_addr, unsigned long end_addr);
 extern int addr_dataflash (unsigned long addr);
-extern int read_dataflash (unsigned long addr, unsigned long size, char *result);
+extern int read_dataflash (unsigned long addr, unsigned long size, unsigned char *result);
 extern int write_dataflash (unsigned long addr, unsigned long dest, unsigned long size);
 extern void dataflash_print_info (void);
 extern void dataflash_perror (int err);

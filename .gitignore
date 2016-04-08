@@ -1,0 +1,9 @@
+*.o
+*.dis
+tags
+*.map
+*.srec
+.*
+loader
+*.bin
+
