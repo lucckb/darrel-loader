@@ -43,7 +43,7 @@ size_t decompress_image( void* outmem, const void* inmem, const size_t insize )
 	uint8_t* out = (uint8_t*)outmem;
 	size_t ret = 0;
 	ssize_t cs, us;
-	while( ret < insize  ) {
+	while( (ulong)in - (ulong)inmem < insize  ) {
 		if( insize<MIN_HDR_SIZE || in[0]!='Z' || in[1]!='V' ) {
 			//Fatal return 0
 			break;
