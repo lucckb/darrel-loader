@@ -135,7 +135,7 @@
 # include <cstring>
 # include <climits>
 #else
-# include <string.h>
+# include <linux/string.h>
 //# include <limits.h>
 #endif
 

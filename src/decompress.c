@@ -19,7 +19,7 @@
 #include <decompress.h>
 #include <common.h>
 #include <linux/types.h>
-#include "string.h"
+#include "linux/string.h"
 
 #if CONFIG_UBOOT_LZF_COMPRESSED
 
