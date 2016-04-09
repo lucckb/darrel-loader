@@ -35,7 +35,6 @@ typedef volatile unsigned char	vu_char;
 #include <config.h>
 #include <linux/bitops.h>
 #include <linux/types.h>
-#include <linux/string.h>
 #include <asm/ptrace.h>
 #include <asm/u-boot-arm.h>
 #include <stdarg.h>

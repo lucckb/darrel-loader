@@ -43,7 +43,8 @@ include $(TOPDIR)/config.mk
 # loader objects....order is important (i.e. start must be first)
 
 AOBJS = src/start.o
-COBJS = src/io.o src/board.o src/serial.o src/xmodem.o src/dataflash.o src/div0.o src/interrupts.o
+COBJS = src/io.o src/board.o src/serial.o src/xmodem.o src/dataflash.o src/interrupts.o
+COBJS += src/lzf_d.o src/decompress.o
 
 # Add GCC lib
 PLATFORM_LIBS += --no-warn-mismatch -L $(shell dirname `$(CC) $(CFLAGS) -print-libgcc-file-name`) -lgcc

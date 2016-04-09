@@ -26,6 +26,18 @@
 
 #define __CONFIG_H
 
+//! Enable or disable preliminary SRAM test
+#define CONFIG_SDRAM_TEST 0
+
+//! Support for software compression
+#define CONFIG_UBOOT_LZF_COMPRESSED 1
+
+
+//! DATAFLASH configuration
+#define DATAFLASH_MAX_PAGESIZE		264
+#define DATAFLASH_LOADER_BASE		   (0*DATAFLASH_MAX_PAGESIZE)
+#define DATAFLASH_UBOOT_BASE		  (43*DATAFLASH_MAX_PAGESIZE)
+#define DATAFLASH_ENV_UBOOT_BASE	 (510*DATAFLASH_MAX_PAGESIZE)
 
 #define CFG_GBL_DATA_SIZE (128)
 #define CFG_MALLOC_LEN (512 * 1024)
@@ -68,6 +80,10 @@
 
 //Define uart speed divide from master clock
 #define UART_PRESCALER 33
+
+
+
+
 
 // <------------------------------------- SDRAM Configuration -----------------------------------------
 /* Number of SDRAM Column

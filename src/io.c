@@ -22,7 +22,6 @@
  */
 
 #include <common.h>
-
 void uintprint(unsigned int x)
 {
   char stack[10];
@@ -59,6 +58,7 @@ void hexprint(unsigned int hexval)
   putc(' ');
 }
 
+#if 0
 void hexdump(int *addr, int len)
 {
   while(len)
@@ -80,6 +80,7 @@ void hexdump(int *addr, int len)
       puts("\n");
     }
 }
+#endif
 
 void outl(int addr, int data)
 {
