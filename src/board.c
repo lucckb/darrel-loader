@@ -161,7 +161,7 @@ void start_armboot (void)
 	interrupt_init();
 	serial_init();
 	for(i=0; i < 10000; i++); /* Some of the parts want some time after powerup */
-	puts("\n.\n.\n.\nBoFFLDR based on darrel-loader\nVersion 1.2. Build " __DATE__ " " __TIME__ "\n");
+	puts("\n.\n.\n.\nBoFFLDR based on darrel-loader\nVersion 2.0 Build " __DATE__ " " __TIME__ "\n");
 
 	configure_sdram();
 	puts("DRAM:"), uintprint(SDRAM_SIZE), puts("MB\n");
