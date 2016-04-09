@@ -40,6 +40,7 @@ extern void dataflash_print_info (void);
 
 #define DATAFLASH_LOADER_LEN (DATAFLASH_UBOOT_BASE-DATAFLASH_LOADER_BASE)
 #define DATAFLASH_UBOOT_LEN (DATAFLASH_ENV_UBOOT_BASE-DATAFLASH_UBOOT_BASE)
+#define DATAFLASH_TOTAL_LEN (DATAFLASH_ENV_UBOOT_END-DATAFLASH_LOADER_BASE)
 #define DATAFLASH_UBOOT_MINLEN 8192
 #define MIN_IMAGE_SIZE 256
 
@@ -176,13 +177,18 @@ void start_armboot (void)
 			//puts("3: Upload Kernel to Dataflash\n");
 			puts("4: Start u-boot\n");
 			puts("5: Erase flash\n");
+#if CONFIG_SDRAM_TEST
 			puts("6: Memory test\n");
+#endif
 			dispmenu = 0;
 		}
 		if(tstc())
 		{
 			key = getc();
-			autoboot = 0;
+			if( key == CONFIG_AUTOBOOT_ESCAPE ) {
+				autoboot = 0;
+				key = 0;
+			}
 		}
 		else
 			key = 0;
@@ -255,11 +261,11 @@ void start_armboot (void)
 		else if(key == '5')
 		{
 			puts("Erase dataflash - ");
-			for(i=0;i<135168/4;i+=4)
+			for(i=0;i<DATAFLASH_TOTAL_LEN/sizeof(long);i+=sizeof(long))
 				outl(SCRATCH_RAM_ADR+i, 0xff);
 			AT91F_DataflashInit ();
 			dataflash_print_info ();
-			if(write_dataflash(DATAFLASH_LOADER_BASE, SCRATCH_RAM_ADR, 135168))
+			if(write_dataflash(DATAFLASH_LOADER_BASE, SCRATCH_RAM_ADR, DATAFLASH_TOTAL_LEN))
 				puts("Done\n");
 			else
 				puts("Failed\n");
