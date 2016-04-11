@@ -228,7 +228,7 @@ void start_armboot (void)
 					if( l>= DATAFLASH_UBOOT_MINLEN && l <= DATAFLASH_UBOOT_LEN ) {
 						l = decompress_image(UBOOT_SDRAM_START,UBOOT_SDRAM_COMPR+sizeof(long),l);
 						if(l) {
-							puts("Decompress u-boot siz ");
+							puts("Decompress u-boot size ");
 							uintprint(l); 
 							putc('\n');
 							goto *(UBOOT_SDRAM_START);

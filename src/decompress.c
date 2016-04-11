@@ -27,7 +27,8 @@
 #define TYPE1_HDR_SIZE 7
 #define MAX_HDR_SIZE 7
 #define MIN_HDR_SIZE 5
-
+//! Maximum allowed packet overhead in the XMODEM proto
+#define XMODEM_PACKET_OVERHEAD 127
 
 
 
@@ -45,7 +46,11 @@ size_t decompress_image( void* outmem, const void* inmem, const size_t insize )
 	ssize_t cs, us;
 	while( (ulong)in - (ulong)inmem < insize  ) {
 		if( insize<MIN_HDR_SIZE || in[0]!='Z' || in[1]!='V' ) {
-			ret = 0;
+			/* NOTE: Xmodem protocol always use 128 data bytes 
+			 * packet len so the exact file length is not known */
+			if( insize-((ulong)in-(ulong)inmem) > XMODEM_PACKET_OVERHEAD ) {
+				ret = 0;
+			}
 			break;
 		}
 		if( in[2] == 0 ) {
@@ -63,16 +68,18 @@ size_t decompress_image( void* outmem, const void* inmem, const size_t insize )
 		}
 		if( cs == - 1 ) {
 			memcpy( out, in, us );
-			in += us; out+= us; 
+			in  += us; 
+			out += us; 
 			ret += us;
 		} else {
           if (lzf_decompress (in, cs, out, us) != us ) {
 			  ret = 0;
 			  break;
+		  } else {
+			in  += cs;		
+			out += us;
+			ret += us;
 		  }
-		  in += cs;
-		  out += us;
-		  ret += us;
 		}
 	}
 	return ret;
