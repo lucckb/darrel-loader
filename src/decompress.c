@@ -45,7 +45,7 @@ size_t decompress_image( void* outmem, const void* inmem, const size_t insize )
 	ssize_t cs, us;
 	while( (ulong)in - (ulong)inmem < insize  ) {
 		if( insize<MIN_HDR_SIZE || in[0]!='Z' || in[1]!='V' ) {
-			//Fatal return 0
+			ret = 0;
 			break;
 		}
 		if( in[2] == 0 ) {
@@ -58,6 +58,7 @@ size_t decompress_image( void* outmem, const void* inmem, const size_t insize )
 			in += TYPE1_HDR_SIZE;
 			
 		} else {
+			ret = 0;
 			break;
 		}
 		if( cs == - 1 ) {
@@ -66,7 +67,8 @@ size_t decompress_image( void* outmem, const void* inmem, const size_t insize )
 			ret += us;
 		} else {
           if (lzf_decompress (in, cs, out, us) != us ) {
-			  return 0;
+			  ret = 0;
+			  break;
 		  }
 		  in += cs;
 		  out += us;
