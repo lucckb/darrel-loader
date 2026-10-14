@@ -28,6 +28,11 @@ PLATFORM_LDFLAGS =
 PLATFORM_RELFLAGS = -fno-strict-aliasing  -fno-common -ffixed-r8 -msoft-float
 PLATFORM_CPPFLAGS = -march=armv4 -mtune=arm920t -DCONFIG_ARM -D__ARM__
 TEXT_BASE = 0x00000000
+# SDRAM variant: 32 (BFC-1, default) or 64 (AS4C32M16SB). make SDRAM_MB=64
+SDRAM_MB ?= 32
+ifeq ($(filter 32 64,$(SDRAM_MB)),)
+$(error SDRAM_MB must be 32 or 64)
+endif
 
 #########################################################################
 
@@ -54,7 +59,7 @@ OBJCFLAGS += --gap-fill=0xff
 gccincdir := $(shell $(CC) -print-file-name=include)
 
 CPPFLAGS := $(DBGFLAGS) $(OPTFLAGS) $(RELFLAGS)		\
-	-D__KERNEL__ -DTEXT_BASE=$(TEXT_BASE)		\
+	-D__KERNEL__ -DTEXT_BASE=$(TEXT_BASE) -DSDRAM_MB=$(SDRAM_MB) $(if $(ALLOW_UNVERIFIED_TIMINGS),-DALLOW_UNVERIFIED_TIMINGS) \
 	-I$(TOPDIR)/include				\
 	-fno-builtin -ffreestanding -nostdinc -isystem	\
 	$(gccincdir) -pipe $(PLATFORM_CPPFLAGS)
@@ -74,7 +79,7 @@ LDFLAGS += -Bstatic -T $(LDSCRIPT) -Ttext $(TEXT_BASE) $(PLATFORM_LDFLAGS)
 #########################################################################
 
 export	CROSS_COMPILE AS LD CC CPP AR NM STRIP OBJCOPY OBJDUMP MAKE
-export	TEXT_BASE PLATFORM_CPPFLAGS PLATFORM_RELFLAGS CPPFLAGS CFLAGS AFLAGS
+export	SDRAM_MB TEXT_BASE PLATFORM_CPPFLAGS PLATFORM_RELFLAGS CPPFLAGS CFLAGS AFLAGS
 
 #########################################################################
 

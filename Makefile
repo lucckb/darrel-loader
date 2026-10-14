@@ -55,6 +55,13 @@ ALL = loader.dis loader.srec loader.bin System.map
 
 all:		$(ALL)
 
+# rebuild everything when SDRAM_MB changes
+SDRAM_STAMP := .sdram-$(SDRAM_MB)
+$(SDRAM_STAMP):
+		rm -f .sdram-*
+		touch $@
+$(AOBJS) $(COBJS): $(SDRAM_STAMP)
+
 loader.srec:	loader
 		$(OBJCOPY) ${OBJCFLAGS} -O srec $< $@
 
@@ -104,7 +111,7 @@ clean:
 
 clobber:	clean
 	find . -type f \
-		\( -name .depend -o -name '*.srec' -o -name '*.bin' \) \
+		\( -name .depend -o -name '.sdram-*' -o -name '*.srec' -o -name '*.bin' \) \
 		-print \
 		| xargs rm -f
 	rm -f $(OBJS) *.bak tags TAGS

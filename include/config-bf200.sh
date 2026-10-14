@@ -68,7 +68,7 @@
 
 #define CONFIG_NR_DRAM_BANKS 1
 #define PHYS_SDRAM 0x20000000
-#define PHYS_SDRAM_SIZE 0x2000000  /* 32 megs */
+#define PHYS_SDRAM_SIZE (SDRAM_MB << 20)  /* unused */
 
 #define CONFIG_HAS_DATAFLASH    1
 #define CFG_SPI_WRITE_TOUT      (5*CFG_HZ)
@@ -96,7 +96,19 @@
  * 1 - Column bits 9
  * 2 - Column bits 10
  * 3 - Column bits 11 */
+#ifndef SDRAM_MB
+#define SDRAM_MB 32		/* default: BFC-1, 32 MB, 16-bit */
+#endif
+
+#if SDRAM_MB == 32
+/* 256 Mb x16: 4 banks, 13 rows, 9 cols */
 #define SDRAM_COL 1
+#elif SDRAM_MB == 64
+/* AS4C32M16SB-7TCN, 512 Mb x16: 4 banks, 13 rows, 10 cols */
+#define SDRAM_COL 2
+#else
+#error "SDRAM_MB must be 32 or 64"
+#endif
 
 
 /* Number of SDRAM Row
@@ -113,6 +125,7 @@
 #define SDRAM_BANKS 1
 
 
+#if SDRAM_MB == 32
 /* SDRAM Cas latency
  * 0 - Reserved
  * 1 - Reserved
@@ -156,9 +169,27 @@
 
 #define SDRAM_TXSR 5
 
+#else /* SDRAM_MB == 64 */
+/* TODO: compute from AS4C32M16SB-7 datasheet @ MCK = 59.904 MHz (16.7 ns).
+ * Placeholders = copy of 32 MB values, NOT verified. */
+#ifndef SDRAM64_TIMINGS_VERIFIED
+#ifndef ALLOW_UNVERIFIED_TIMINGS
+#error "SDRAM_MB=64: timings not verified (RAM tests only: make ALLOW_UNVERIFIED_TIMINGS=1)"
+#else
+#warning "SDRAM_MB=64: SDRAM timings are unverified placeholders"
+#endif
+#endif
+#define SDRAM_CAS	2	/* TODO */
+#define SDRAM_TWR	3	/* TODO */
+#define SDRAM_TRC	5	/* TODO */
+#define SDRAM_TRP	3	/* TODO */
+#define SDRAM_TRCD	3	/* TODO */
+#define SDRAM_TRAS	3	/* TODO */
+#define SDRAM_TXSR	5	/* TODO */
+#endif
 
 /* SDRAM Board size in Megs */
-#define SDRAM_SIZE 32
+#define SDRAM_SIZE SDRAM_MB
 
 
 /* SDRAM refresh time */
@@ -173,3 +204,8 @@
 
 
 
+/* Compile-time check: organisation must match declared size */
+#if ((1 << (8 + SDRAM_COL)) * (1 << (11 + SDRAM_ROW)) * (2 << SDRAM_BANKS) * \
+     (SDRAM_BUS_16BIT ? 2 : 4)) != (SDRAM_SIZE << 20)
+#error "SDRAM_COL/ROW/BANKS/BUS do not match SDRAM_SIZE"
+#endif
