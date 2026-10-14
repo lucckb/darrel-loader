@@ -37,7 +37,7 @@
 #define LOADER_TAG0 ""
 #endif
 /* Test builds (never for production) are marked in the banner */
-#if defined(TEST_HOOKS) || defined(DRYRUN_FLASH) || CONFIG_SDRAM_TEST
+#if defined(TEST_HOOKS) || defined(DRYRUN_FLASH)
 #define LOADER_TAG LOADER_TAG0 " TEST-BUILD"
 #else
 #define LOADER_TAG LOADER_TAG0

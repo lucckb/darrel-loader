@@ -70,6 +70,9 @@ CFLAGS := $(CPPFLAGS) -std=gnu17 -Wall -Wstrict-prototypes \
 else
 CFLAGS := $(CPPFLAGS) -std=gnu17 -Wall -Wstrict-prototypes
 endif
+ifdef LOADER_VERSION
+CFLAGS += -DLOADER_VERSION='"$(LOADER_VERSION)"'
+endif
 
 AFLAGS_DEBUG := -Wa,-gstabs
 AFLAGS := $(AFLAGS_DEBUG) -D__ASSEMBLY__ $(CPPFLAGS)

@@ -24,7 +24,10 @@
 #ifndef	__VERSION_H__
 #define	__VERSION_H__
 
+/* overridden by the release script: make LOADER_VERSION=x.y */
+#ifndef LOADER_VERSION
 #define	LOADER_VERSION	"2.1"
+#endif
 
 #define	__STR(x)	#x
 #define	STR(x)		__STR(x)
