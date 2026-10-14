@@ -37,7 +37,7 @@
 #define LOADER_TAG0 ""
 #endif
 /* Test builds (never for production) are marked in the banner */
-#if defined(TEST_HOOKS) || defined(DRYRUN_FLASH)
+#if defined(TEST_HOOKS) || defined(DRYRUN_FLASH) || CONFIG_SDRAM_TEST
 #define LOADER_TAG LOADER_TAG0 " TEST-BUILD"
 #else
 #define LOADER_TAG LOADER_TAG0
@@ -105,6 +105,55 @@ static int memory_test(unsigned int base, size_t len)
 
 	return 0;
 }
+
+#if CONFIG_SDRAM_TEST
+/* Extended test (menu option 6): four passes over the whole range, each one
+ * writes everything and then reads everything back.
+ *   0: word index   - a unique value per word, finds aliased addresses
+ *   1: ~word index  - together with 0 every bit is seen as 0 and as 1
+ *   2: 0x55555555 / 3: 0xAAAAAAAA - shorted neighbouring data lines
+ * Prints the first failing word. */
+static unsigned int mt_pattern(unsigned int i, int pass)
+{
+	switch (pass) {
+	case 0:  return i;
+	case 1:  return ~i;
+	case 2:  return 0x55555555;
+	default: return 0xAAAAAAAA;
+	}
+}
+
+static int memory_test_full(unsigned int base, size_t len)
+{
+	volatile unsigned int *p;
+	unsigned int i, n = len / sizeof(int), v, got;
+	int pass;
+
+	for (pass = 0; pass < 4; pass++) {
+		p = (volatile unsigned int *)base;
+		for (i = 0; i < n; i++) {
+			*p++ = mt_pattern(i, pass);
+			if (!(i & 0x3FFFF))	/* progress: a dot per MB */
+				putc('.');
+		}
+		p = (volatile unsigned int *)base;
+		for (i = 0; i < n; i++) {
+			v = mt_pattern(i, pass);
+			if (!(i & 0x3FFFF))
+				putc('.');
+			got = *p++;
+			if (got != v) {
+				puts("\nFAIL @"), hexprint((unsigned int)(p - 1));
+				puts(" exp "), hexprint(v);
+				puts(" got "), hexprint(got), putc('\n');
+				return 1;
+			}
+		}
+		putc('|');
+	}
+	return 0;
+}
+#endif
 
 
 static void configure_sdram (void)
@@ -331,7 +380,7 @@ void start_armboot (void)
 		else if(key == '6'){
 			puts ("\nTesting RAM, Detected "), uintprint(SDRAM_SIZE), puts("MB ==> ");
 
-			if (!memory_test(AT91_SDRAM_BASE, SDRAM_SIZE * ONE_MBYTES))
+			if (!memory_test_full(AT91_SDRAM_BASE, SDRAM_SIZE * ONE_MBYTES))
 				puts ("OK\n");
 			else
 				puts ("FAILED\n");

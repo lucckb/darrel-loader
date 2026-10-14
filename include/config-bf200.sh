@@ -30,7 +30,9 @@
 #define CONFIG_AUTOBOOT_ESCAPE '~'
 
 //! Enable or disable preliminary SRAM test
+#ifndef CONFIG_SDRAM_TEST
 #define CONFIG_SDRAM_TEST 0
+#endif
 
 //! Support for software compression
 #define CONFIG_UBOOT_LZF_COMPRESSED 1
