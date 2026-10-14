@@ -52,14 +52,14 @@ RANLIB	= $(CROSS_COMPILE)RANLIB
 
 RELFLAGS= $(PLATFORM_RELFLAGS)
 DBGFLAGS= -g #-DDEBUG
-OPTFLAGS= -Os #-fomit-frame-pointer
+OPTFLAGS= -Os -ffunction-sections -fdata-sections #-fomit-frame-pointer
 LDSCRIPT := u-boot.lds
 OBJCFLAGS += --gap-fill=0xff
 
 gccincdir := $(shell $(CC) -print-file-name=include)
 
 CPPFLAGS := $(DBGFLAGS) $(OPTFLAGS) $(RELFLAGS)		\
-	-D__KERNEL__ -DTEXT_BASE=$(TEXT_BASE) -DSDRAM_MB=$(SDRAM_MB) $(if $(ALLOW_UNVERIFIED_TIMINGS),-DALLOW_UNVERIFIED_TIMINGS) \
+	-D__KERNEL__ -DTEXT_BASE=$(TEXT_BASE) -DSDRAM_MB=$(SDRAM_MB) $(if $(ALLOW_UNVERIFIED_TIMINGS),-DALLOW_UNVERIFIED_TIMINGS) $(if $(TEST_HOOKS),-DTEST_HOOKS=1) $(if $(DRYRUN_FLASH),-DDRYRUN_FLASH=1) \
 	-I$(TOPDIR)/include				\
 	-fno-builtin -ffreestanding -nostdinc -isystem	\
 	$(gccincdir) -pipe $(PLATFORM_CPPFLAGS)
@@ -74,7 +74,7 @@ endif
 AFLAGS_DEBUG := -Wa,-gstabs
 AFLAGS := $(AFLAGS_DEBUG) -D__ASSEMBLY__ $(CPPFLAGS)
 
-LDFLAGS += -Bstatic -T $(LDSCRIPT) -Ttext $(TEXT_BASE) $(PLATFORM_LDFLAGS)
+LDFLAGS += -Bstatic -T $(LDSCRIPT) -Ttext $(TEXT_BASE) $(PLATFORM_LDFLAGS) --gc-sections
 
 #########################################################################
 

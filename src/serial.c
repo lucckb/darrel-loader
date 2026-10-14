@@ -40,11 +40,6 @@ AT91PS_USART us = (AT91PS_USART) AT91C_BASE_DBGU;
 void
 serial_setbrg (void)
 {
-  DECLARE_GLOBAL_DATA_PTR;
-  int baudrate;
-
-  if ((baudrate = gd->bd->bi_baudrate) <= 0)
-    baudrate = CONFIG_BAUDRATE;
   us->US_BRGR = UART_PRESCALER;	    /* hardcode so no __divsi3 */
 }
 

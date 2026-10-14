@@ -432,6 +432,9 @@ AT91S_DataFlashStatus AT91F_WriteBufferToMain (
 /*			: <AdrInpage> = adr to begin the fading			*/
 /*                     : <length> = Number of bytes to erase			*/
 /*------------------------------------------------------------------------------*/
+#define WAIT_RDY(f) \
+	(AT91F_DataFlashWaitReady((f)->pDataFlashDesc, AT91C_TIMEOUT_WRDY) == DATAFLASH_OK)
+
 AT91S_DataFlashStatus AT91F_PartialPageWrite (
 	AT91PS_DataFlash pDataFlash,
 	unsigned char *src,
@@ -445,22 +448,26 @@ AT91S_DataFlashStatus AT91F_PartialPageWrite (
 	AdrInPage = dest % (pDataFlash->pDevice->pages_size);
 
 	/* Read the contents of the page in the Sram Buffer */
-	AT91F_MainMemoryToBufferTransfert(pDataFlash, DB_PAGE_2_BUF1_TRF, page);
-	AT91F_DataFlashWaitReady(pDataFlash->pDataFlashDesc, AT91C_TIMEOUT_WRDY);
+	if (AT91F_MainMemoryToBufferTransfert(pDataFlash, DB_PAGE_2_BUF1_TRF, page) != DATAFLASH_OK ||
+	    !WAIT_RDY(pDataFlash))
+		return DATAFLASH_ERROR;
 	/*Update the SRAM buffer */
-	AT91F_DataFlashWriteBuffer(pDataFlash, DB_BUF1_WRITE, src, AdrInPage, size);
-
-	AT91F_DataFlashWaitReady(pDataFlash->pDataFlashDesc, AT91C_TIMEOUT_WRDY);
+	if (AT91F_DataFlashWriteBuffer(pDataFlash, DB_BUF1_WRITE, src, AdrInPage, size) != DATAFLASH_OK ||
+	    !WAIT_RDY(pDataFlash))
+		return DATAFLASH_ERROR;
 
 	/* Erase page if a 128 Mbits device */
 	if (pDataFlash->pDevice->pages_number >= 16384) {
-		AT91F_PageErase(pDataFlash, page);
-		/* Rewrite the modified Sram Buffer in the main memory */
-		AT91F_DataFlashWaitReady(pDataFlash->pDataFlashDesc, AT91C_TIMEOUT_WRDY);
+		if (AT91F_PageErase(pDataFlash, page) != DATAFLASH_OK ||
+		    !WAIT_RDY(pDataFlash))
+			return DATAFLASH_ERROR;
 	}
 
 	/* Rewrite the modified Sram Buffer in the main memory */
-	return(AT91F_WriteBufferToMain(pDataFlash, DB_BUF1_PAGE_ERASE_PGM, (page*pDataFlash->pDevice->pages_size)));
+	if (AT91F_WriteBufferToMain(pDataFlash, DB_BUF1_PAGE_ERASE_PGM, (page*pDataFlash->pDevice->pages_size)) != DATAFLASH_OK ||
+	    !WAIT_RDY(pDataFlash))
+		return DATAFLASH_ERROR;
+	return DATAFLASH_OK;
 }
 
 
@@ -493,10 +500,8 @@ AT91S_DataFlashStatus AT91F_DataFlashWrite(
 		if (size < length)
 			length = size;
 
-		if(!AT91F_PartialPageWrite(pDataFlash,src, dest, length))
+		if(AT91F_PartialPageWrite(pDataFlash,src, dest, length) != DATAFLASH_OK)
 			return DATAFLASH_ERROR;
-
-		AT91F_DataFlashWaitReady(pDataFlash->pDataFlashDesc, AT91C_TIMEOUT_WRDY);
 
 		/* Update size, source and destination pointers */
 		size -= length;
@@ -509,18 +514,16 @@ AT91S_DataFlashStatus AT91F_DataFlashWrite(
 		page = (unsigned int)dest / (pDataFlash->pDevice->pages_size);
 
 		status = AT91F_DataFlashWriteBuffer(pDataFlash, DB_BUF1_WRITE, src, 0, pDataFlash->pDevice->pages_size);
-		AT91F_DataFlashWaitReady(pDataFlash->pDataFlashDesc, AT91C_TIMEOUT_WRDY);
+		if (status != DATAFLASH_OK || !WAIT_RDY(pDataFlash))
+			return DATAFLASH_ERROR;
 
 		status = AT91F_PageErase(pDataFlash, page);
-		AT91F_DataFlashWaitReady(pDataFlash->pDataFlashDesc, AT91C_TIMEOUT_WRDY);
-		if (!status)
+		if (status != DATAFLASH_OK || !WAIT_RDY(pDataFlash))
 			return DATAFLASH_ERROR;
 
 		status = AT91F_WriteBufferToMain (pDataFlash, DB_BUF1_PAGE_PGM, dest);
-		if(!status)
+		if (status != DATAFLASH_OK || !WAIT_RDY(pDataFlash))
 			return DATAFLASH_ERROR;
-
-		AT91F_DataFlashWaitReady(pDataFlash->pDataFlashDesc, AT91C_TIMEOUT_WRDY);
 
 		/* Update size, source and destination pointers */
 		size -= pDataFlash->pDevice->pages_size ;
@@ -531,10 +534,8 @@ AT91S_DataFlashStatus AT91F_DataFlashWrite(
 	/* If still some bytes to read */
 	if ( size > 0 ) {
 		/* program dataflash page */
-		if(!AT91F_PartialPageWrite(pDataFlash, src, dest, size) )
+		if(AT91F_PartialPageWrite(pDataFlash, src, dest, size) != DATAFLASH_OK)
 			return DATAFLASH_ERROR;
-
-		AT91F_DataFlashWaitReady(pDataFlash->pDataFlashDesc, AT91C_TIMEOUT_WRDY);
 	}
 	return DATAFLASH_OK;
 }
@@ -641,7 +642,7 @@ case AT45DB041:
     dataflash_info.Device.byte_mask = 0x700;
     break;
   default:
-    break;
+    return 0;	/* unknown device: pages_size would stay 0 */
   }
   return (1);
 }

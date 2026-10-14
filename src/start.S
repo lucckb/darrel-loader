@@ -188,6 +188,9 @@ cpu_init_crit:
 #define S_R0		0
 
 #define MODE_SVC 0x13
+/* Scratch words for the exception handlers: the 256 bytes above the SVC
+ * stack (see stack_setup), TEXT_BASE + 16384 - 256 */
+#define ABORT_SCRATCH 0x3F00
 #define I_BIT	 0x80
 
 /*
@@ -200,9 +203,7 @@ cpu_init_crit:
 	stmia	sp, {r0 - r12}			@ Calling r0-r12
 	add     r8, sp, #S_PC
 
-	ldr	r2, _armboot_start
-	sub	r2, r2, #(CONFIG_STACKSIZE+CFG_MALLOC_LEN)
-	sub	r2, r2, #(CFG_GBL_DATA_SIZE+8)  @ set base 2 words into abort stack
+	mov	r2, #ABORT_SCRATCH		@ 3 words saved by get_bad_stack
 	ldmia	r2, {r2 - r4}                   @ get pc, cpsr, old_r0
 	add	r0, sp, #S_FRAME_SIZE		@ restore sp_SVC
 
@@ -233,9 +234,7 @@ cpu_init_crit:
 	.endm
 
 	.macro get_bad_stack
-	ldr	r13, _armboot_start		@ setup our mode stack
-	sub	r13, r13, #(CONFIG_STACKSIZE+CFG_MALLOC_LEN)
-	sub	r13, r13, #(CFG_GBL_DATA_SIZE+8) @ reserved a couple spots in abort stack
+	mov	r13, #ABORT_SCRATCH		@ abort scratch area in SRAM
 
 	str	lr, [r13]			@ save caller lr / spsr
 	mrs	lr, spsr
@@ -321,7 +320,3 @@ fiq:
 
 #endif
 
-	.align	5
-.globl reset_cpu
-reset_cpu:
-	mov     pc, r0

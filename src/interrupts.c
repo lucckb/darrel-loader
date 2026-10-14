@@ -36,7 +36,19 @@
 #include <asm/arch/hardware.h>
 #include <asm/proc/ptrace.h>
 
-extern void reset_cpu (ulong addr);
+/* Real processor reset through the system timer watchdog (as U-Boot does for
+ * the AT91RM9200); jumping to address 0 did not restart the loader. */
+#define ST_CR	0xFFFFFD00	/* WDRST = bit 0 */
+#define ST_WDMR	0xFFFFFD08	/* RSTEN = bit 16, WDV = bits 15:0 */
+
+void
+reset_cpu (ulong addr)
+{
+  outl (ST_WDMR, (1 << 16) | 1);
+  outl (ST_CR, 1);
+  for (;;)
+    ;
+}
 
 /* we always count down the max. */
 #define TIMER_LOAD_VAL 0xffff
@@ -221,9 +233,8 @@ udelay_masked (unsigned long usec)
 {
   ulong tmo;
 
-  tmo = usec / 1000;
-  tmo *= CFG_HZ;
-  tmo /= 1000;
+  /* CFG_HZ ticks per second; the old usec/1000 form gave 0 below 1 ms */
+  tmo = usec * ((CFG_HZ) / 1000000);
 
   reset_timer_masked ();
 

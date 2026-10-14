@@ -36,9 +36,10 @@
  * @param[in] Output memory
  * @param[in] Compesed liblzf image
  * @param[in] LZF input buffer length
+ * @param[in] Size of the output buffer
  * @return Decompressed image size or 0 if fail
  */
-size_t decompress_image( void* outmem, const void* inmem, const size_t insize )
+size_t decompress_image( void* outmem, const void* inmem, const size_t insize, const size_t outmax )
 {
 	const uint8_t* in = (const uint8_t*)inmem;
 	uint8_t* out = (uint8_t*)outmem;
@@ -66,6 +67,11 @@ size_t decompress_image( void* outmem, const void* inmem, const size_t insize )
 			ret = 0;
 			break;
 		}
+		if( us > outmax - ret ) {
+			/* would not fit into the output buffer */
+			ret = 0;
+			break;
+		}
 		if( cs == - 1 ) {
 			memcpy( out, in, us );
 			in  += us; 
@@ -86,8 +92,10 @@ size_t decompress_image( void* outmem, const void* inmem, const size_t insize )
 }
 
 #else
-size_t decompress_image( void* outmem, const void* inmem, const size_t insize ) 
+size_t decompress_image( void* outmem, const void* inmem, const size_t insize, const size_t outmax ) 
 {
+	if( insize > outmax )
+		return 0;
 	memcpy( outmem, inmem, insize );
 	return insize;
 }

@@ -32,22 +32,23 @@ SECTIONS
 	. = ALIGN(4);
 	.text      :
 	{
-	  src/start.o	(.text)
-	  *(.text)
+	  KEEP(src/start.o(.text))
+	  *(.text .text.*)
 	}
 
 	. = ALIGN(4);
-	.rodata : { *(.rodata) }
+	.rodata : { *(.rodata .rodata.*) }
 
 	. = ALIGN(4);
-	.data : { *(.data) }
+	.data : { *(.data .data.*) }
 
 	. = ALIGN(4);
 	.got : { *(.got) }
 
 	. = ALIGN(4);
 	__bss_start = .;
-	.bss : { *(.bss) }
+	.bss : { *(.bss .bss.*) }
+	. = ALIGN(4);
 	_end = .;
 }
 

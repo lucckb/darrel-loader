@@ -22,7 +22,7 @@
 #include <common.h>
 
 
-int lzf_decompress (const void *const in_data,  unsigned int in_len,
+unsigned int lzf_decompress (const void *const in_data,  unsigned int in_len,
                 void             *out_data, unsigned int out_len);
-size_t decompress_image( void* outmem, const void* inmem, size_t insize );
+size_t decompress_image( void* outmem, const void* inmem, size_t insize, size_t outmax );
 

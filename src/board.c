@@ -29,6 +29,19 @@
 #include <xmodem.h>
 #include <io.h>
 #include <decompress.h>
+#include "linux/string.h"
+
+#ifdef BUILD_TAG
+#define LOADER_TAG0 " [" BUILD_TAG "]"
+#else
+#define LOADER_TAG0 ""
+#endif
+/* Test builds (never for production) are marked in the banner */
+#if defined(TEST_HOOKS) || defined(DRYRUN_FLASH)
+#define LOADER_TAG LOADER_TAG0 " TEST-BUILD"
+#else
+#define LOADER_TAG LOADER_TAG0
+#endif
 
 extern int AT91F_DataflashInit (void);
 extern void dataflash_print_info (void);
@@ -47,6 +60,8 @@ extern void dataflash_print_info (void);
 #define UBOOT_SDRAM_COMPR_ADDR 0x21e00000
 #define UBOOT_SDRAM_COMPR ((unsigned char *)UBOOT_SDRAM_COMPR_ADDR)
 #define UBOOT_SDRAM_START ((unsigned char *)0x21f00000)
+/* u-boot must fit below the 32 MB boundary; common to the 32 and 64 MB builds */
+#define UBOOT_MAX_SIZE (0x22000000 - 0x21f00000)
 
 
 #define EBI_CSA 0xFFFFFF60
@@ -129,7 +144,7 @@ static void configure_sdram (void)
 	outl(AT91_SDRAM_BASE, 0);
 	outl(AT91_SDRAM_BASE, 0);
 	outl(SDRAMC_MR, 0x3 | (SDRAM_BUS_16BIT<<4) );
-	for(i = 0; i < 100; i++);
+	udelay(1);
 	outl(0x20000080, 0);
 	outl(SDRAMC_TR, SDRAM_REFRESH);
 	outl(AT91_SDRAM_BASE, 0);
@@ -143,6 +158,76 @@ static void configure_sdram (void)
 		puts("\nPreliminary RAM test failed");
 		hang();
 	}
+}
+
+/* Second RAM buffer for the read-back verification */
+#define VERIFY_RAM_ADR (AT91_SDRAM_BASE + 0x800000)
+
+/* Throw away pending UART input until the line is quiet for 1 s (at most
+ * 32 K chars), e.g. the tail of an aborted XMODEM transfer. */
+static void drain_uart (void)
+{
+	unsigned int n = 0;
+
+	reset_timer_masked();
+	while (get_timer_masked() < CFG_HZ && n < 32768) {
+		if (tstc()) {
+			getc();
+			n++;
+			reset_timer_masked();
+		}
+	}
+}
+
+/* Wait up to 5 s for an explicit 'y' */
+static int confirm_yes (const char *msg)
+{
+	drain_uart();
+	puts(msg);
+	reset_timer_masked();
+	while (get_timer_masked() < 5 * CFG_HZ)
+		if (tstc())
+			return getc() == 'y';
+	return 0;
+}
+
+/* The SPI PDC receives into the TX buffer too, so the source image is
+ * destroyed by write_dataflash(). Keep a copy and compare the read-back
+ * data (placed in the original buffer) against it. */
+static int flash_verify (unsigned long addr, unsigned long len)
+{
+	const unsigned char *a = (const unsigned char *)VERIFY_RAM_ADR;
+	const unsigned char *b = (const unsigned char *)SCRATCH_RAM_ADR;
+
+	if (read_dataflash(addr, len, (unsigned char *)b) != DATAFLASH_OK)
+		return 0;
+	while (len--)
+		if (*a++ != *b++)
+			return 0;
+	return 1;
+}
+
+/* Write len bytes from SCRATCH_RAM_ADR to dst and verify them by reading back */
+static void flash_store (unsigned long dst, unsigned long len)
+{
+	int rc;
+
+	if (!AT91F_DataflashInit()) {
+		puts("Dataflash not found\n");
+		return;
+	}
+	dataflash_print_info();
+	memcpy((void *)VERIFY_RAM_ADR, (void *)SCRATCH_RAM_ADR, len);
+	rc = write_dataflash(dst, SCRATCH_RAM_ADR, len);
+	if (rc != DATAFLASH_OK) {
+		puts("Flash WR FAIL "), uintprint(rc), putc('\n');
+		return;
+	}
+	if (!flash_verify(dst, len)) {
+		puts("Verify FAIL\n");
+		return;
+	}
+	puts("Flash WR OK\n");
 }
 
 void start_armboot (void)
@@ -160,8 +245,8 @@ void start_armboot (void)
 
 	interrupt_init();
 	serial_init();
-	for(i=0; i < 10000; i++); /* Some of the parts want some time after powerup */
-	puts("\n.\n.\n.\nBoFFLDR based on darrel-loader\nVersion 2.0 Build " __DATE__ " " __TIME__ "\n");
+	udelay(200); /* SDRAM needs >= 200 us after power-up before init */
+	puts("\n.\n.\n.\nBoFFLDR based on darrel-loader\nVersion " LOADER_VERSION " SDRAM " STR(SDRAM_MB) "MB" LOADER_TAG " Build " __DATE__ " " __TIME__ "\n");
 
 	configure_sdram();
 	puts("DRAM:"), uintprint(SDRAM_SIZE), puts("MB\n");
@@ -197,11 +282,9 @@ void start_armboot (void)
 			len = rxmodem(SCRATCH_RAM_BPTR);
 			if( len > MIN_IMAGE_SIZE && len < DATAFLASH_LOADER_LEN ) {
 				outl(SCRATCH_RAM_ADR + 0x00000014, ((528 << 17) + (12 << 13) + 24));
-				AT91F_DataflashInit ();
-				dataflash_print_info ();
-				if(write_dataflash(DATAFLASH_LOADER_BASE, SCRATCH_RAM_ADR, len))
-					puts("Flash WR OK\n");
+				flash_store(DATAFLASH_LOADER_BASE, len);
 			} else {
+				drain_uart();
 				puts("\nFlash size Error\n");
 			}
 			dispmenu = 1;
@@ -211,11 +294,9 @@ void start_armboot (void)
 			len = rxmodem(SCRATCH_RAM_BPTR+sizeof(long));
 			if( len > MIN_IMAGE_SIZE && len < DATAFLASH_UBOOT_LEN ) {
 				outl( SCRATCH_RAM_ADR,  len ); //Uboot bin length first
-				AT91F_DataflashInit ();
-				dataflash_print_info ();
-				if(write_dataflash(DATAFLASH_UBOOT_BASE, SCRATCH_RAM_ADR, len+sizeof(long)))
-					puts("Flash WR OK\n");
+				flash_store(DATAFLASH_UBOOT_BASE, len+sizeof(long));
 			} else {
+				drain_uart();
 				puts("\nFlash size Error\n");
 			}
 			dispmenu = 1;
@@ -223,10 +304,10 @@ void start_armboot (void)
 		else if(key == '4' || ((scans > 300000) && autoboot)){
 			if(AT91F_DataflashInit ()){
 				dataflash_print_info ();
-				if(read_dataflash(DATAFLASH_UBOOT_BASE,DATAFLASH_UBOOT_LEN, UBOOT_SDRAM_COMPR )){
+				if(read_dataflash(DATAFLASH_UBOOT_BASE,DATAFLASH_UBOOT_LEN, UBOOT_SDRAM_COMPR ) == DATAFLASH_OK){
 					int l = inl(UBOOT_SDRAM_COMPR_ADDR);
 					if( l>= DATAFLASH_UBOOT_MINLEN && l <= DATAFLASH_UBOOT_LEN ) {
-						l = decompress_image(UBOOT_SDRAM_START,UBOOT_SDRAM_COMPR+sizeof(long),l);
+						l = decompress_image(UBOOT_SDRAM_START,UBOOT_SDRAM_COMPR+sizeof(long),l,UBOOT_MAX_SIZE);
 						if(l) {
 							puts("Decompress u-boot size ");
 							uintprint(l); 
@@ -260,17 +341,41 @@ void start_armboot (void)
 #endif
 		else if(key == '5')
 		{
-			puts("Erase dataflash - ");
-			for(i=0;i<DATAFLASH_TOTAL_LEN/sizeof(long);i+=sizeof(long))
-				outl(SCRATCH_RAM_ADR+i, 0xff);
-			AT91F_DataflashInit ();
-			dataflash_print_info ();
-			if(write_dataflash(DATAFLASH_LOADER_BASE, SCRATCH_RAM_ADR, DATAFLASH_TOTAL_LEN))
-				puts("Done\n");
-			else
-				puts("Failed\n");
+			if(confirm_yes("Erase ALL dataflash incl. loader? [y/N] ")) {
+				puts("\nErase dataflash - ");
+				for(i=0;i<DATAFLASH_TOTAL_LEN;i+=sizeof(long))
+					outl(SCRATCH_RAM_ADR+i, 0xFFFFFFFF);
+#ifdef DRYRUN_FLASH
+				{
+					const unsigned char *q = (const unsigned char *)SCRATCH_RAM_ADR;
+					unsigned int mn = 255, mx = 0, k;
+
+					for(k=0;k<DATAFLASH_TOTAL_LEN;k++){
+						if(q[k] < mn) mn = q[k];
+						if(q[k] > mx) mx = q[k];
+					}
+					puts("DRYRUN len "), uintprint(DATAFLASH_TOTAL_LEN);
+					puts(" min "), hexprint(mn), puts(" max "), hexprint(mx), putc('\n');
+				}
+#else
+				flash_store(DATAFLASH_LOADER_BASE, DATAFLASH_TOTAL_LEN);
+#endif
+			} else
+				puts("\nCancelled\n");
 			dispmenu = 1;
 		}
+#ifdef TEST_HOOKS
+		else if(key == 'u'){
+			/* exercise the exception path: permanently undefined instruction */
+			puts("TEST: undefined instruction\n");
+			asm volatile (".word 0xe7f000f0");
+		}
+		else if(key == 'f'){
+			/* write to an invalid dataflash address: must fail before any SPI command */
+			flash_store(0x7FFFFFFF, 128);
+			dispmenu = 1;
+		}
+#endif
 		else if(key == 0)
 			dispmenu = 0;
 		else{

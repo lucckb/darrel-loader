@@ -37,7 +37,6 @@ int rxmodem(unsigned char *dest)
 	}
         
 //	puts("Receiving Xmodem transfer\n");
-	for (i = 0; i < 20000000; i++);
 	while (tstc ()) /* clear uart buffer */
 		getc ();
 	
