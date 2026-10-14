@@ -24,7 +24,7 @@
 #define ACK	0x06
 #define	NAK	0x15
 
-int rxmodem(unsigned char *dest)
+int rxmodem(unsigned char *dest, unsigned int maxlen)
 {
 	unsigned long *ptr = (unsigned long *) 0x20000000;
 	unsigned short crc, tcrc;
@@ -74,6 +74,9 @@ int rxmodem(unsigned char *dest)
 			return 0;
 
 		if (pid1 != pid)
+			return 0;
+
+		if (len + 128 > maxlen)	/* would overflow the receive buffer */
 			return 0;
 
 		for (i = 0; i < 130; i++)

@@ -62,6 +62,12 @@ extern void dataflash_print_info (void);
 #define UBOOT_SDRAM_START ((unsigned char *)0x21f00000)
 /* u-boot must fit below the 32 MB boundary; common to the 32 and 64 MB builds */
 #define UBOOT_MAX_SIZE (0x22000000 - 0x21f00000)
+/* u-boot image in dataflash: [compressed length][UBOOT_HDR_MAGIC<<16 | crc16]
+ * [LZF data]. Only this format is accepted. */
+#define UBOOT_HDR_MAGIC 0xB0FF
+#define UBOOT_HDR_SIZE (2 * sizeof(long))
+/* time to wait for a key before u-boot is started */
+#define AUTOBOOT_DELAY (1 * CFG_HZ)
 
 
 #define EBI_CSA 0xFFFFFF60
@@ -196,6 +202,10 @@ static void configure_sdram (void)
 	udelay(1);
 	outl(0x20000080, 0);
 	outl(SDRAMC_TR, SDRAM_REFRESH);
+	/* Second access while still in load-mode-register mode. Kept on
+	 * purpose: this sequence (same as U-Boot's lowlevel_init for the
+	 * RM9200) runs on 32 MB boards for years and was verified on the 64 MB
+	 * part. Do not change it without a logic analyzer measurement. */
 	outl(AT91_SDRAM_BASE, 0);
 	outl(SDRAMC_MR, 0x0 | (SDRAM_BUS_16BIT<<4) );
 
@@ -226,6 +236,21 @@ static void drain_uart (void)
 			reset_timer_masked();
 		}
 	}
+}
+
+/* A loader image starts with the 8 word exception vector table:
+ * "b reset" followed by seven "ldr pc, [pc, #x]". */
+static int loader_image_ok (const unsigned char *img)
+{
+	const unsigned int *w = (const unsigned int *)img;
+	unsigned int i;
+
+	if ((w[0] & 0xFF000000) != 0xEA000000)
+		return 0;
+	for (i = 1; i < 8; i++)
+		if ((w[i] & 0xFFFFF000) != 0xE59FF000)
+			return 0;
+	return 1;
 }
 
 /* Wait up to 5 s for an explicit 'y' */
@@ -279,19 +304,150 @@ static void flash_store (unsigned long dst, unsigned long len)
 	puts("Flash WR OK\n");
 }
 
-void start_armboot (void)
+/* PMC clock initialization: PLLA -> master clock */
+static void clock_init (void)
 {
-	int len, i;
-
-	/* PMC Clock Initialization */
 	AT91PS_PMC pmc = (AT91PS_PMC)AT91C_BASE_PMC;
-	pmc->CKGR_PLLAR = 0x20269004;
 
+	pmc->CKGR_PLLAR = 0x20269004;
 	while(!(pmc->PMC_SR & 0x2));
 	pmc->CKGR_PLLBR = 0x10193E05;
 	while(!(pmc->PMC_SR & 0x4));
 	pmc->PMC_MCKR = 0x202;    /*Select PLLA as MCK*/
+}
 
+static void print_menu (void)
+{
+	puts("\n1: Upload loader\n");
+	puts("2: Upload u-boot\n");
+	puts("4: Start u-boot\n");
+	puts("5: Erase flash\n");
+#if CONFIG_SDRAM_TEST
+	puts("6: Memory test\n");
+#endif
+}
+
+/* Menu 1: receive loader.bin by XMODEM and write it to the dataflash */
+static void upload_loader (void)
+{
+	int len;
+
+	puts("Please send loader.bin via Xmodem\n");
+	len = rxmodem(SCRATCH_RAM_BPTR, DATAFLASH_LOADER_LEN);
+	if( len > MIN_IMAGE_SIZE && len < DATAFLASH_LOADER_LEN &&
+	    loader_image_ok(SCRATCH_RAM_BPTR) ) {
+		/* dataflash geometry for the BootROM goes to the vector 6 slot */
+		outl(SCRATCH_RAM_ADR + 0x00000014, ((528 << 17) + (12 << 13) + 24));
+		flash_store(DATAFLASH_LOADER_BASE, len);
+	} else {
+		drain_uart();
+		puts("\nImage error\n");
+	}
+}
+
+/* Menu 2: receive the LZF compressed u-boot, add the length and CRC header */
+static void upload_uboot (void)
+{
+	int len;
+
+	puts("Please send u-boot.bin via Xmodem\n");
+	len = rxmodem(SCRATCH_RAM_BPTR+UBOOT_HDR_SIZE, DATAFLASH_UBOOT_LEN - UBOOT_HDR_SIZE);
+	/* LZF framed image: starts with "ZV" */
+	if( len > MIN_IMAGE_SIZE && len <= DATAFLASH_UBOOT_LEN - UBOOT_HDR_SIZE &&
+	    SCRATCH_RAM_BPTR[UBOOT_HDR_SIZE] == 'Z' && SCRATCH_RAM_BPTR[UBOOT_HDR_SIZE+1] == 'V' ) {
+		outl( SCRATCH_RAM_ADR,  len ); //Uboot bin length first
+		outl( SCRATCH_RAM_ADR+sizeof(long), (UBOOT_HDR_MAGIC << 16) |
+			crc16_ccitt(SCRATCH_RAM_BPTR+UBOOT_HDR_SIZE, len) );
+		flash_store(DATAFLASH_UBOOT_BASE, len+UBOOT_HDR_SIZE);
+	} else {
+		drain_uart();
+		puts("\nImage error\n");
+	}
+}
+
+/* Menu 4 and autoboot: read, check and decompress u-boot, then jump to it.
+ * Returns only when something failed. */
+static void boot_uboot (void)
+{
+	int l;
+	unsigned int w;
+
+	if(!AT91F_DataflashInit ()){
+		puts("Dataflash not found\n");
+		return;
+	}
+	dataflash_print_info ();
+	if(read_dataflash(DATAFLASH_UBOOT_BASE,DATAFLASH_UBOOT_LEN, UBOOT_SDRAM_COMPR ) != DATAFLASH_OK)
+		return;
+	l = inl(UBOOT_SDRAM_COMPR_ADDR);
+	w = inl(UBOOT_SDRAM_COMPR_ADDR + sizeof(long));
+
+	if( (w >> 16) != UBOOT_HDR_MAGIC ) {
+		/* images without the CRC header are not accepted */
+		puts("Invalid u-boot header\n");
+	} else if( l < DATAFLASH_UBOOT_MINLEN || l > DATAFLASH_UBOOT_LEN - UBOOT_HDR_SIZE ) {
+		puts("Invalid compr len\n");
+	} else if( crc16_ccitt(UBOOT_SDRAM_COMPR+UBOOT_HDR_SIZE, l) != (w & 0xFFFF) ) {
+		puts("u-boot CRC error\n");
+	} else {
+		l = decompress_image(UBOOT_SDRAM_START,UBOOT_SDRAM_COMPR+UBOOT_HDR_SIZE,l,UBOOT_MAX_SIZE);
+		if(l) {
+			puts("Decompress u-boot size ");
+			uintprint(l); 
+			putc('\n');
+			((void (*)(void))UBOOT_SDRAM_START)();
+		} else {
+			puts("Uncompress u-boot fail\n");
+		}
+	}
+}
+
+/* Menu 5: erase the whole dataflash (after an explicit 'y') */
+static void erase_flash (void)
+{
+	unsigned int i;
+
+	if(!confirm_yes("Erase ALL dataflash incl. loader? [y/N] ")) {
+		puts("\nCancelled\n");
+		return;
+	}
+	puts("\nErase dataflash - ");
+	for(i=0;i<DATAFLASH_TOTAL_LEN;i+=sizeof(long))
+		outl(SCRATCH_RAM_ADR+i, 0xFFFFFFFF);
+#ifdef DRYRUN_FLASH
+	{
+		const unsigned char *q = (const unsigned char *)SCRATCH_RAM_ADR;
+		unsigned int mn = 255, mx = 0, k;
+
+		for(k=0;k<DATAFLASH_TOTAL_LEN;k++){
+			if(q[k] < mn) mn = q[k];
+			if(q[k] > mx) mx = q[k];
+		}
+		puts("DRYRUN len "), uintprint(DATAFLASH_TOTAL_LEN);
+		puts(" min "), hexprint(mn), puts(" max "), hexprint(mx), putc('\n');
+	}
+#else
+	flash_store(DATAFLASH_LOADER_BASE, DATAFLASH_TOTAL_LEN);
+#endif
+}
+
+#if CONFIG_SDRAM_TEST
+/* Menu 6: extended SDRAM test */
+static void ram_test (void)
+{
+	puts ("\nTesting RAM, Detected "), uintprint(SDRAM_SIZE), puts("MB ==> ");
+	if (!memory_test_full(AT91_SDRAM_BASE, SDRAM_SIZE * ONE_MBYTES))
+		puts ("OK\n");
+	else
+		puts ("FAILED\n");
+}
+#endif
+
+void start_armboot (void)
+{
+	int key, autoboot = 1, dispmenu = 1;
+
+	clock_init();
 	interrupt_init();
 	serial_init();
 	udelay(200); /* SDRAM needs >= 200 us after power-up before init */
@@ -300,22 +456,15 @@ void start_armboot (void)
 	configure_sdram();
 	puts("DRAM:"), uintprint(SDRAM_SIZE), puts("MB\n");
 
-	int key = 0, autoboot = 1, scans = 0, dispmenu = 1;
-
 	while(1) /* loop forever until u-boot gets booted or the board is reset */
 	{
 		if(dispmenu)
 		{
-			puts("\n1: Upload loader\n");
-			puts("2: Upload u-boot\n");
-			//puts("3: Upload Kernel to Dataflash\n");
-			puts("4: Start u-boot\n");
-			puts("5: Erase flash\n");
-#if CONFIG_SDRAM_TEST
-			puts("6: Memory test\n");
-#endif
+			reset_timer_masked();	/* restart the autoboot countdown */
+			print_menu();
 			dispmenu = 0;
 		}
+		key = 0;
 		if(tstc())
 		{
 			key = getc();
@@ -324,114 +473,53 @@ void start_armboot (void)
 				key = 0;
 			}
 		}
-		else
-			key = 0;
-		if(key == '1'){
-			puts("Please send loader.bin via Xmodem\n");
-			len = rxmodem(SCRATCH_RAM_BPTR);
-			if( len > MIN_IMAGE_SIZE && len < DATAFLASH_LOADER_LEN ) {
-				outl(SCRATCH_RAM_ADR + 0x00000014, ((528 << 17) + (12 << 13) + 24));
-				flash_store(DATAFLASH_LOADER_BASE, len);
-			} else {
-				drain_uart();
-				puts("\nFlash size Error\n");
-			}
-			dispmenu = 1;
-		}
-		else if(key == '2'){
-			puts("Please send u-boot.bin via Xmodem\n");
-			len = rxmodem(SCRATCH_RAM_BPTR+sizeof(long));
-			if( len > MIN_IMAGE_SIZE && len < DATAFLASH_UBOOT_LEN ) {
-				outl( SCRATCH_RAM_ADR,  len ); //Uboot bin length first
-				flash_store(DATAFLASH_UBOOT_BASE, len+sizeof(long));
-			} else {
-				drain_uart();
-				puts("\nFlash size Error\n");
-			}
-			dispmenu = 1;
-		}
-		else if(key == '4' || ((scans > 300000) && autoboot)){
-			if(AT91F_DataflashInit ()){
-				dataflash_print_info ();
-				if(read_dataflash(DATAFLASH_UBOOT_BASE,DATAFLASH_UBOOT_LEN, UBOOT_SDRAM_COMPR ) == DATAFLASH_OK){
-					int l = inl(UBOOT_SDRAM_COMPR_ADDR);
-					if( l>= DATAFLASH_UBOOT_MINLEN && l <= DATAFLASH_UBOOT_LEN ) {
-						l = decompress_image(UBOOT_SDRAM_START,UBOOT_SDRAM_COMPR+sizeof(long),l,UBOOT_MAX_SIZE);
-						if(l) {
-							puts("Decompress u-boot size ");
-							uintprint(l); 
-							putc('\n');
-							goto *(UBOOT_SDRAM_START);
-						} else {
-							puts("Uncompress u-boot fail\n");
-						}
-					} else {
-						puts("Invalid compr len\n");
-					}
-				}
-			} else {
-				puts("Dataflash not found\n");
-			}
-			scans = 0;
-			dispmenu = 1;
-			autoboot = 0;
-		}
-#if CONFIG_SDRAM_TEST
-		else if(key == '6'){
-			puts ("\nTesting RAM, Detected "), uintprint(SDRAM_SIZE), puts("MB ==> ");
+		if(key == 0 && autoboot && get_timer_masked() >= AUTOBOOT_DELAY)
+			key = '4';
 
-			if (!memory_test_full(AT91_SDRAM_BASE, SDRAM_SIZE * ONE_MBYTES))
-				puts ("OK\n");
-			else
-				puts ("FAILED\n");
-
-			dispmenu = 1;
-		}
-#endif
-		else if(key == '5')
+		switch(key)
 		{
-			if(confirm_yes("Erase ALL dataflash incl. loader? [y/N] ")) {
-				puts("\nErase dataflash - ");
-				for(i=0;i<DATAFLASH_TOTAL_LEN;i+=sizeof(long))
-					outl(SCRATCH_RAM_ADR+i, 0xFFFFFFFF);
-#ifdef DRYRUN_FLASH
-				{
-					const unsigned char *q = (const unsigned char *)SCRATCH_RAM_ADR;
-					unsigned int mn = 255, mx = 0, k;
-
-					for(k=0;k<DATAFLASH_TOTAL_LEN;k++){
-						if(q[k] < mn) mn = q[k];
-						if(q[k] > mx) mx = q[k];
-					}
-					puts("DRYRUN len "), uintprint(DATAFLASH_TOTAL_LEN);
-					puts(" min "), hexprint(mn), puts(" max "), hexprint(mx), putc('\n');
-				}
-#else
-				flash_store(DATAFLASH_LOADER_BASE, DATAFLASH_TOTAL_LEN);
-#endif
-			} else
-				puts("\nCancelled\n");
+		case 0:
+			break;
+		case '1':
+			upload_loader();
 			dispmenu = 1;
-		}
+			break;
+		case '2':
+			upload_uboot();
+			dispmenu = 1;
+			break;
+		case '4':
+			boot_uboot();	/* returns only on failure */
+			autoboot = 0;
+			dispmenu = 1;
+			break;
+		case '5':
+			erase_flash();
+			dispmenu = 1;
+			break;
+#if CONFIG_SDRAM_TEST
+		case '6':
+			ram_test();
+			dispmenu = 1;
+			break;
+#endif
 #ifdef TEST_HOOKS
-		else if(key == 'u'){
+		case 'u':
 			/* exercise the exception path: permanently undefined instruction */
 			puts("TEST: undefined instruction\n");
 			asm volatile (".word 0xe7f000f0");
-		}
-		else if(key == 'f'){
+			break;
+		case 'f':
 			/* write to an invalid dataflash address: must fail before any SPI command */
 			flash_store(0x7FFFFFFF, 128);
 			dispmenu = 1;
-		}
+			break;
 #endif
-		else if(key == 0)
-			dispmenu = 0;
-		else{
+		default:
 			puts("Invalid input\n");
 			dispmenu = 1;
+			break;
 		}
-		scans++;
 	}
 	/* NOTREACHED - no way out of command loop except booting */
 }

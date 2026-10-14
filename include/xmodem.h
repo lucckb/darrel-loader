@@ -4,4 +4,4 @@
 unsigned short crc16_ccitt(const void *buf, int len);
 
 #endif /* _CRC16_H_ */
-int rxmodem(unsigned char *);
+int rxmodem(unsigned char *, unsigned int);

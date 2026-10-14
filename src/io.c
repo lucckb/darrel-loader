@@ -58,29 +58,6 @@ void hexprint(unsigned int hexval)
   putc(' ');
 }
 
-#if 0
-void hexdump(int *addr, int len)
-{
-  while(len)
-    {
-      hexprint((int) addr);
-      putc(' ');
-      hexprint(*addr);
-      addr ++;
-      putc(' ');
-      hexprint(*addr);
-      addr ++;
-      putc(' ');
-      hexprint(*addr);
-      addr ++;
-      putc(' ');
-      hexprint(*addr);
-      addr ++;
-      len -= 16;
-      puts("\n");
-    }
-}
-#endif
 
 void outl(int addr, int data)
 {

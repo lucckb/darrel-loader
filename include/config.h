@@ -1,1 +1,1 @@
-config-bf200.sh
+config-bf200.h

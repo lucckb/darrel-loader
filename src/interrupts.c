@@ -221,7 +221,7 @@ get_timer_masked (void)
   else
     {
       /* we have an overflow ... */
-      timestamp += now + TIMER_LOAD_VAL - lastinc;
+      timestamp += now + TIMER_LOAD_VAL + 1 - lastinc;
     }
   lastinc = now;
 

@@ -43,13 +43,14 @@ size_t decompress_image( void* outmem, const void* inmem, const size_t insize, c
 {
 	const uint8_t* in = (const uint8_t*)inmem;
 	uint8_t* out = (uint8_t*)outmem;
-	size_t ret = 0;
+	size_t ret = 0, rem, hdr;
 	ssize_t cs, us;
 	while( (ulong)in - (ulong)inmem < insize  ) {
-		if( insize<MIN_HDR_SIZE || in[0]!='Z' || in[1]!='V' ) {
+		rem = insize - ((ulong)in - (ulong)inmem);	/* input bytes left */
+		if( rem<MIN_HDR_SIZE || in[0]!='Z' || in[1]!='V' ) {
 			/* NOTE: Xmodem protocol always use 128 data bytes 
 			 * packet len so the exact file length is not known */
-			if( insize-((ulong)in-(ulong)inmem) > XMODEM_PACKET_OVERHEAD ) {
+			if( rem > XMODEM_PACKET_OVERHEAD ) {
 				ret = 0;
 			}
 			break;
@@ -57,18 +58,20 @@ size_t decompress_image( void* outmem, const void* inmem, const size_t insize, c
 		if( in[2] == 0 ) {
 			cs = -1;
 			us = (in[3] << 8) | in[4];
-			in += TYPE0_HDR_SIZE;
-		} else if( in[2] == 1 ) {
+			hdr = TYPE0_HDR_SIZE;
+		} else if( in[2] == 1 && rem >= TYPE1_HDR_SIZE ) {
 			cs = (in[3] << 8) | in[4];
-            us = (in[5] << 8) | in[6];
-			in += TYPE1_HDR_SIZE;
-			
+			us = (in[5] << 8) | in[6];
+			hdr = TYPE1_HDR_SIZE;
 		} else {
 			ret = 0;
 			break;
 		}
-		if( us > outmax - ret ) {
-			/* would not fit into the output buffer */
+		in  += hdr;
+		rem -= hdr;
+		if( us > outmax - ret || (size_t)(cs == -1 ? us : cs) > rem ) {
+			/* the block would not fit into the output buffer or
+			 * extends past the end of the input */
 			ret = 0;
 			break;
 		}

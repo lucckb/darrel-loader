@@ -3,7 +3,7 @@ new features:
 
 - Better SDRAM configuration
 - Added support for new dataflash chips AT45DB011 and AT45DB041
-- Support for second bootloader GZIP-ed images
+- Support for second bootloader images compressed with LZF (liblzf "lzf -c")
 
 Loader is dedicated for the BF210 boards
 

@@ -95,6 +95,42 @@ int main(int argc, char **argv)
 		CHECK(n == 0, "stream larger than the 1 MiB limit rejected, no write past buffer");
 	}
 
+	/* 6: input cut inside a block: must be rejected without reading past the
+	 * end of the (exactly sized) input buffer */
+	{
+		size_t cut = clen / 2;
+		unsigned char *p = malloc(cut);
+
+		memcpy(p, comp, cut);
+		out = guarded(1 << 20);
+		n = decompress_image(out, p, cut, 1 << 20);
+		CHECK(n == 0, "input truncated inside a block rejected");
+		free(p);
+	}
+
+	/* 7: input cut inside a type 1 header (6 of 7 header bytes present) */
+	{
+		unsigned char *p = malloc(6);
+
+		memcpy(p, comp, 6);
+		out = guarded(1 << 20);
+		n = decompress_image(out, p, 6, 1 << 20);
+		CHECK(n == 0 || n == rlen * 0, "truncated header does not read out of bounds");
+		free(p);
+	}
+
+	/* 8: raw (type 0) block whose length field exceeds the input */
+	{
+		unsigned char *p = malloc(5 + 10);
+
+		p[0] = 'Z'; p[1] = 'V'; p[2] = 0; p[3] = 0x10; p[4] = 0x00;   /* claims 4096 bytes */
+		memset(p + 5, 0xA5, 10);
+		out = guarded(1 << 20);
+		n = decompress_image(out, p, 15, 1 << 20);
+		CHECK(n == 0, "raw block longer than the input rejected");
+		free(p);
+	}
+
 	printf(fails ? "RESULT: %d FAILED\n" : "RESULT: all passed\n", fails);
 	return fails != 0;
 }

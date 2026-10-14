@@ -79,14 +79,14 @@
 #define CFG_DATAFLASH_LOGIC_ADDR_CS0    0xC0000000      /* Logical adress for CS0 */
 #define CFG_DATAFLASH_LOGIC_ADDR_CS3    0xD0000000      /* Logical adress for CS3 */
 
-#define	CFG_HZ AT91C_MASTER_CLOCK/2  /* AT91C_TC0_CMR is implicitly set to
+#define	CFG_HZ (AT91C_MASTER_CLOCK/2)  /* AT91C_TC0_CMR is implicitly set to
 					AT91C_TC_TIMER_DIV1_CLOCK */
 
 #define CONFIG_STACKSIZE	(32*1024)	/* regular stack */
 
 
 //Define uart speed divide from master clock
-#define UART_PRESCALER 33
+#define UART_PRESCALER CFG_AT91C_BRGR_DIVISOR
 
 
 

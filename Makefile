@@ -111,7 +111,7 @@ clean:
 
 clobber:	clean
 	find . -type f \
-		\( -name .depend -o -name '.sdram-*' -o -name '*.srec' -o -name '*.bin' \) \
+		\( -name .depend -o -name '.sdram-*' -o -name '*.srec' \) \
 		-print \
 		| xargs rm -f
 	rm -f $(OBJS) *.bak tags TAGS

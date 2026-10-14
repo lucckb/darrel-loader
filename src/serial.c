@@ -56,7 +56,7 @@ serial_init (void)
   us->US_MR =
     (AT91C_US_CLKS_CLOCK | AT91C_US_CHRL_8_BITS |
      AT91C_US_PAR_NONE | AT91C_US_NBSTOP_1_BIT);
-  us->US_IMR = ~0ul;
+  us->US_IDR = ~0ul;
   return (0);
 }
 
@@ -73,12 +73,7 @@ void
 puts (const char *s)
 {
   while (*s)
-    {
-      if (*s == '\n')
-	putc ('\r');
-      putc(*s);
-      s++;
-    }
+    putc (*s++);	/* putc() sends \r\n for \n */
 }
 
 int

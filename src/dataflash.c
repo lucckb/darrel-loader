@@ -313,7 +313,7 @@ AT91S_DataFlashStatus AT91F_DataFlashWriteBuffer (
 		return DATAFLASH_BAD_COMMAND;
 
 	/* buffer address must be lower than page size */
-	if (bufferAddress > pDataFlash->pDevice->pages_size)
+	if (bufferAddress >= pDataFlash->pDevice->pages_size)
 		return DATAFLASH_BAD_ADDRESS;
 
 	if ( (pDataFlash->pDataFlashDesc->state)  != IDLE)
