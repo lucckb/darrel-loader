@@ -65,10 +65,10 @@ CPPFLAGS := $(DBGFLAGS) $(OPTFLAGS) $(RELFLAGS)		\
 	$(gccincdir) -pipe $(PLATFORM_CPPFLAGS)
 
 ifdef BUILD_TAG
-CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes \
+CFLAGS := $(CPPFLAGS) -std=gnu17 -Wall -Wstrict-prototypes \
 	-DBUILD_TAG='"$(BUILD_TAG)"'
 else
-CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes
+CFLAGS := $(CPPFLAGS) -std=gnu17 -Wall -Wstrict-prototypes
 endif
 
 AFLAGS_DEBUG := -Wa,-gstabs
