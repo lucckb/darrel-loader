@@ -61,8 +61,16 @@ loader.srec:	loader
 loader.ihex:	loader
 		$(OBJCOPY) ${OBJCFLAGS} -O ihex $< $@
 
+LOADER_MAX_BIN ?= 11264
+
 loader.bin:	loader
 		$(OBJCOPY) ${OBJCFLAGS} -O binary $< $@
+		@sz=`wc -c < $@`; \
+		if [ $$sz -gt $(LOADER_MAX_BIN) ]; then \
+			echo "loader.bin: $$sz B exceeds $(LOADER_MAX_BIN) B"; \
+			rm -f $@; exit 1; \
+		fi; \
+		echo "loader.bin: $$sz B, free $$(( $(LOADER_MAX_BIN) - $$sz )) B"
 
 loader.dis:	loader
 		$(OBJDUMP) -DS $< > $@

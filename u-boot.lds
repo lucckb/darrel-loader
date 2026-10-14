@@ -50,3 +50,7 @@ SECTIONS
 	.bss : { *(.bss) }
 	_end = .;
 }
+
+/* __bss_start is the end of the image that goes into loader.bin */
+ASSERT(__bss_start <= 11264, "loader.bin > 11264 B: XMODEM/loader area limit (43*264 = 11352)")
+ASSERT(_end <= 0x3C00, "loader+BSS too close to the SVC stack (0x3F00)")
