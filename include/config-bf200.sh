@@ -172,22 +172,16 @@
 #define SDRAM_TXSR 5
 
 #else /* SDRAM_MB == 64 */
-/* TODO: compute from AS4C32M16SB-7 datasheet @ MCK = 59.904 MHz (16.7 ns).
- * Placeholders = copy of 32 MB values, NOT verified. */
-#ifndef SDRAM64_TIMINGS_VERIFIED
-#ifndef ALLOW_UNVERIFIED_TIMINGS
-#error "SDRAM_MB=64: timings not verified (RAM tests only: make ALLOW_UNVERIFIED_TIMINGS=1)"
-#else
-#warning "SDRAM_MB=64: SDRAM timings are unverified placeholders"
-#endif
-#endif
-#define SDRAM_CAS	2	/* TODO */
-#define SDRAM_TWR	3	/* TODO */
-#define SDRAM_TRC	5	/* TODO */
-#define SDRAM_TRP	3	/* TODO */
-#define SDRAM_TRCD	3	/* TODO */
-#define SDRAM_TRAS	3	/* TODO */
-#define SDRAM_TXSR	5	/* TODO */
+/* AS4C32M16SB-7 at MCK = 59.904 MHz (16.7 ns). The cycle counts of the
+ * 32 MB part meet the datasheet minimums (tightest margin is tRAS) and
+ * were verified on hardware with the SDRAM test and a Linux run. */
+#define SDRAM_CAS	2
+#define SDRAM_TWR	3
+#define SDRAM_TRC	5
+#define SDRAM_TRP	3
+#define SDRAM_TRCD	3
+#define SDRAM_TRAS	3
+#define SDRAM_TXSR	5
 #endif
 
 /* SDRAM Board size in Megs */

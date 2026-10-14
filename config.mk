@@ -59,7 +59,7 @@ OBJCFLAGS += --gap-fill=0xff
 gccincdir := $(shell $(CC) -print-file-name=include)
 
 CPPFLAGS := $(DBGFLAGS) $(OPTFLAGS) $(RELFLAGS)		\
-	-D__KERNEL__ -DTEXT_BASE=$(TEXT_BASE) -DSDRAM_MB=$(SDRAM_MB) $(if $(ALLOW_UNVERIFIED_TIMINGS),-DALLOW_UNVERIFIED_TIMINGS) $(if $(TEST_HOOKS),-DTEST_HOOKS=1) $(if $(DRYRUN_FLASH),-DDRYRUN_FLASH=1) $(if $(SDRAM_TEST),-DCONFIG_SDRAM_TEST=1) \
+	-D__KERNEL__ -DTEXT_BASE=$(TEXT_BASE) -DSDRAM_MB=$(SDRAM_MB) $(if $(TEST_HOOKS),-DTEST_HOOKS=1) $(if $(DRYRUN_FLASH),-DDRYRUN_FLASH=1) $(if $(SDRAM_TEST),-DCONFIG_SDRAM_TEST=1) \
 	-I$(TOPDIR)/include				\
 	-fno-builtin -ffreestanding -nostdinc -isystem	\
 	$(gccincdir) -pipe $(PLATFORM_CPPFLAGS)
